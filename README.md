@@ -27,14 +27,12 @@ El agente opera en un entorno:
 
 Todos deben usar:
 
-Python 3.11.x
+Python 3.12.x
 
 Verificar versión:
-
-```bash
 python --version
 
-Si no es 3.11, instalarla antes de continuar.
+Si no es 3.12, instalarla antes de continuar.
 
 ----------------------------------------------------
 
