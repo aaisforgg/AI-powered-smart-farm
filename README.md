@@ -43,7 +43,8 @@ Si no es 3.12, instalarla antes de continuar.
 2. Crear entorno virtual (Obligatorio): python -m venv venv
 
 3. Activar entorno: venv\Scripts\activate (Windows) - source venv/bin/activate (Mac/Linux)
+   (Si marca problemas de permisos utilizar el comando: Set-ExecutionPolicy RemoteSigned -Scope CurrentUser y volver a activar)
 
-4. Instalar dependencias: pip install -r requirements.txt
+5. Instalar dependencias: pip install -r assets/requirements.txt
 
-5. Ejecutar el proyecto: python main.py
+6. Ejecutar el proyecto: python main.py
