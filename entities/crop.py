@@ -1,13 +1,12 @@
-class Crop:
-    def __init__(self, tipo, x, y):
-        self.tipo = tipo  # "Trigo", "Maiz"
-        self.pos = (x, y)
-        self.fase = 0  # 0: Semilla, 1: Brote, 2: Maduro
-        self.humedad = 100
-        # Definimos pesos por tipo
-        self.peso = 0.5 if tipo == "Trigo" else 0.8
 
-    def crecer(self):
+class Crop:
+    def __init__(self, x, y):
+        self.pos = (x, y)
+        self.humedad = 100.0
+        self.fase = 0
+
+    def crecer(self, tasa_secado, umbral_crecimiento):
         if self.humedad > 0:
-            self.humedad -= 5 
-            if self.humedad > 20: self.fase = min(self.fase + 1, 2)
+            self.humedad -= tasa_secado
+            if self.humedad > umbral_crecimiento:
+                self.fase = min(self.fase + 1, 2)
