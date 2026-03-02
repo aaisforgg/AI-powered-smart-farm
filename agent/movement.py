@@ -1,8 +1,12 @@
+import random
+
 class Movement:
+
+    BLOCKED_TILES = [1, 2, 3]  # agua, acantilado, edificio
 
     def move_towards(self, agent, grid, goal):
         if not goal:
-            return
+            return False
 
         goal_x, goal_y = goal
 
@@ -12,7 +16,6 @@ class Movement:
         move_x = 0
         move_y = 0
 
-        # Movimiento en X primero
         if dx != 0:
             move_x = int(dx / abs(dx))
         elif dy != 0:
@@ -21,10 +24,59 @@ class Movement:
         new_x = agent.x + move_x
         new_y = agent.y + move_y
 
-        # 🔥 VALIDACIÓN DE LÍMITES 80x72
         if 0 <= new_x < 80 and 0 <= new_y < 72:
 
-            # Evitar obstáculos (1 = obstáculo)
-            if grid[new_y][new_x] != 1:
+            tile = grid[new_y][new_x]
+
+            if tile in self.BLOCKED_TILES:
+                return self.change_direction(agent, grid)
+            else:
                 agent.x = new_x
                 agent.y = new_y
+                return True
+
+        return False
+
+    def change_direction(self, agent, grid):
+        directions = [
+            (1, 0),
+            (-1, 0),
+            (0, 1),
+            (0, -1)
+        ]
+
+        random.shuffle(directions)
+
+        for dx, dy in directions:
+            new_x = agent.x + dx
+            new_y = agent.y + dy
+
+            if 0 <= new_x < 80 and 0 <= new_y < 72:
+                tile = grid[new_y][new_x]
+
+                if tile not in self.BLOCKED_TILES:
+                    agent.x = new_x
+                    agent.y = new_y
+                    return True
+
+        return False
+
+    def random_move(self, agent, grid):
+        directions = [
+            (1, 0),
+            (-1, 0),
+            (0, 1),
+            (0, -1)
+        ]
+
+        random.shuffle(directions)
+
+        for dx, dy in directions:
+            new_x = agent.x + dx
+            new_y = agent.y + dy
+
+            if 0 <= new_x < 80 and 0 <= new_y < 72:
+                if grid[new_y][new_x] not in self.BLOCKED_TILES:
+                    agent.x = new_x
+                    agent.y = new_y
+                    return
