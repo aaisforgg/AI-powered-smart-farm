@@ -1,4 +1,3 @@
-#strategies.py
 class StrategyManager:
 
     def choose_strategy(self, grid, goal):

@@ -1,23 +1,15 @@
-#goals.py
 class GoalManager:
 
-    def choose_goal(self, grid):
-        dry_crops = []
-        empty_tiles = []
+    def choose_goal(self, grid, agent):
+        crops = []
 
         for y in range(72):
             for x in range(80):
+                if grid[y][x] == 4:
+                    crops.append((x, y))
 
-                if grid[y][x] == 2:
-                    dry_crops.append((x, y))
+        if not crops:
+            return None
 
-                elif grid[y][x] == 0:
-                    empty_tiles.append((x, y))
-
-        if dry_crops:
-            return min(dry_crops, key=lambda pos: abs(pos[0]) + abs(pos[1]))
-
-        if empty_tiles:
-            return min(empty_tiles, key=lambda pos: abs(pos[0]) + abs(pos[1]))
-
-        return None
+        # Elegir el cultivo más cercano
+        return min(crops, key=lambda pos: abs(pos[0] - agent.x) + abs(pos[1] - agent.y))
