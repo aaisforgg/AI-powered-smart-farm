@@ -1,7 +1,7 @@
 # main.py
 print("Proyecto IA Granja iniciado")
 
-from core.state import State
+from core.state import GameState as State
 from core.pipeline import Pipeline
 from entities.crop import Crop
 # Se elimina el import de SmartAgent por limpieza
