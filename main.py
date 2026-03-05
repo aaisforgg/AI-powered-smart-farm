@@ -1,8 +1,10 @@
 # main.py
+
 import pygame
-import numpy as np # Requisito del proyecto
+import numpy as np
 from world.farm_grid import MAP_DATA, TILE_TYPES
-from world.node import Node # pyright: ignore[reportMissingImports]
+from world.node import Node
+from core.state import GameState
 
 # --- Definición del Agente ---
 class SmartAgent:
@@ -100,20 +102,6 @@ def main():
                                 (nodo.x * celda_px, nodo.y * celda_px, 
                                  celda_px - 1, celda_px - 1))
 
-        # Convertir mundo a mapa para State
-        def construir_state_desde_grid(mundo):
-            state = State()
-
-            for fila in mundo:
-                for nodo in fila:
-                    if nodo.type_name == "agua":
-                        state.mapa[(nodo.x, nodo.y)] = "AGUA"
-                    elif nodo.type_name in ["acantilado", "edificio"]:
-                        state.mapa[(nodo.x, nodo.y)] = "OBSTACULO"
-                    else:
-                        state.mapa[(nodo.x, nodo.y)] = "PASTO"
-
-            return state
         # 3. Actualizar y dibujar agente
         agente.update(mundo)
         
