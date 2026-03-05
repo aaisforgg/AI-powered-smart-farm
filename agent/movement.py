@@ -1,82 +1,61 @@
 import random
+from collections import deque
+
 
 class Movement:
+    """
+    Maneja el desplazamiento del agente en el grid.
 
-    BLOCKED_TILES = [1, 2, 3]  # agua, acantilado, edificio
+    Convención de coordenadas (igual que AStarPathfinder):
+        grid[x][y]  →  x = fila (primera dimensión = rows)
+                        y = columna (segunda dimensión = cols)
+    El agente guarda self.x, self.y con la misma convención.
+    """
 
-    def move_towards(self, agent, grid, goal):
-        if not goal:
+    def follow_path(self, agent):
+        """
+        Consume agent.current_path (deque) un nodo por tick.
+        Retorna True si se movió, False si no había ruta.
+        """
+        path = getattr(agent, "current_path", None)
+        if not path:
             return False
 
-        goal_x, goal_y = goal
+        try:
+            next_node = path.popleft()   # O(1) con deque
+        except IndexError:
+            agent.current_path = deque()
+            return False
 
-        dx = goal_x - agent.x
-        dy = goal_y - agent.y
+        agent.x, agent.y = next_node
+        return True
 
-        move_x = 0
-        move_y = 0
+    def random_move(self, agent, grid):
+        """
+        Mueve al agente en una dirección aleatoria válida.
+        Retorna True si se movió, False si está completamente bloqueado.
+        """
+        directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+        random.shuffle(directions)
 
-        if dx != 0:
-            move_x = int(dx / abs(dx))
-        elif dy != 0:
-            move_y = int(dy / abs(dy))
+        rows = len(grid)
+        cols = len(grid[0]) if rows else 0
 
-        new_x = agent.x + move_x
-        new_y = agent.y + move_y
+        for dx, dy in directions:
+            nx = agent.x + dx
+            ny = agent.y + dy
 
-        if 0 <= new_x < 80 and 0 <= new_y < 72:
-
-            tile = grid[new_y][new_x]
-
-            if tile in self.BLOCKED_TILES:
-                return self.change_direction(agent, grid)
-            else:
-                agent.x = new_x
-                agent.y = new_y
+            if self._is_walkable(nx, ny, grid, rows, cols):
+                agent.x = nx
+                agent.y = ny
                 return True
 
         return False
 
-    def change_direction(self, agent, grid):
-        directions = [
-            (1, 0),
-            (-1, 0),
-            (0, 1),
-            (0, -1)
-        ]
-
-        random.shuffle(directions)
-
-        for dx, dy in directions:
-            new_x = agent.x + dx
-            new_y = agent.y + dy
-
-            if 0 <= new_x < 80 and 0 <= new_y < 72:
-                tile = grid[new_y][new_x]
-
-                if tile not in self.BLOCKED_TILES:
-                    agent.x = new_x
-                    agent.y = new_y
-                    return True
-
-        return False
-
-    def random_move(self, agent, grid):
-        directions = [
-            (1, 0),
-            (-1, 0),
-            (0, 1),
-            (0, -1)
-        ]
-
-        random.shuffle(directions)
-
-        for dx, dy in directions:
-            new_x = agent.x + dx
-            new_y = agent.y + dy
-
-            if 0 <= new_x < 80 and 0 <= new_y < 72:
-                if grid[new_y][new_x] not in self.BLOCKED_TILES:
-                    agent.x = new_x
-                    agent.y = new_y
-                    return
+    def _is_walkable(self, x, y, grid, rows, cols):
+        """
+        grid[x][y] — x=fila, y=columna. Node debe tener .walkable.
+        """
+        if not (0 <= x < rows and 0 <= y < cols):
+            return False
+        return grid[x][y].walkable

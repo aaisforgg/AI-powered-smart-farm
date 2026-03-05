@@ -1,15 +1,55 @@
 class GoalManager:
+    """
+    Elige el cultivo más urgente para el agente.
+    Trabaja con objetos Crop que tienen .pos, .humedad y .fase.
+    """
 
-    def choose_goal(self, grid, agent):
-        crops = []
+    # Menor número = más urgente
+    PRIORITY = {
+        "WATER":   1,
+        "PLANT":   2,
+        "HARVEST": 3,
+    }
 
-        for y in range(72):
-            for x in range(80):
-                if grid[y][x] == 4:
-                    crops.append((x, y))
-
-        if not crops:
+    def choose_goal(self, state, agent):
+        """
+        Retorna el Crop más prioritario y cercano, o None si no hay nada que hacer.
+        """
+        if not state.crops:
             return None
 
-        # Elegir el cultivo más cercano
-        return min(crops, key=lambda pos: abs(pos[0] - agent.x) + abs(pos[1] - agent.y))
+        candidates = []
+
+        for crop in state.crops:
+            strategy = self._evaluate_crop(crop)
+            if strategy is None:
+                continue   # este cultivo no necesita atención ahora
+
+            cx, cy  = crop.pos
+            dist    = abs(cx - agent.x) + abs(cy - agent.y)
+            priority = self.PRIORITY.get(strategy, 99)
+            candidates.append((priority, dist, crop))
+
+        if not candidates:
+            return None
+
+        # Primero por urgencia, luego por cercanía
+        candidates.sort(key=lambda c: (c[0], c[1]))
+        return candidates[0][2]
+
+    # ------------------------------------------------------------------
+    def _evaluate_crop(self, crop):
+        """
+        Devuelve la estrategia que necesita el cultivo, o None si está bien.
+        Basado en los atributos reales de Crop: .humedad y .fase
+        """
+        if crop.humedad < 30:
+            return "WATER"
+
+        if crop.fase == 0:
+            return "PLANT"
+
+        if crop.fase >= 2:
+            return "HARVEST"
+
+        return None   # fase 1 → creciendo, sin acción necesaria
