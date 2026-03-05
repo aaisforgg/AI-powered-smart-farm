@@ -1,10 +1,12 @@
 import random
+from core.logic import calcular_costo_movimiento_total
+
 
 class Movement:
 
     BLOCKED_TILES = [1, 2, 3]  # agua, acantilado, edificio
 
-    def move_towards(self, agent, grid, goal):
+    def move_towards(self, agent, state, goal):
         if not goal:
             return False
 
@@ -24,20 +26,12 @@ class Movement:
         new_x = agent.x + move_x
         new_y = agent.y + move_y
 
-        if 0 <= new_x < 80 and 0 <= new_y < 72:
+        if not self._is_valid_position(new_x, new_y, state):
+            return False
 
-            tile = grid[new_y][new_x]
+        return self._apply_movement(agent, state, new_x, new_y)
 
-            if tile in self.BLOCKED_TILES:
-                return self.change_direction(agent, grid)
-            else:
-                agent.x = new_x
-                agent.y = new_y
-                return True
-
-        return False
-
-    def change_direction(self, agent, grid):
+    def random_move(self, agent, state):
         directions = [
             (1, 0),
             (-1, 0),
@@ -51,32 +45,72 @@ class Movement:
             new_x = agent.x + dx
             new_y = agent.y + dy
 
-            if 0 <= new_x < 80 and 0 <= new_y < 72:
-                tile = grid[new_y][new_x]
-
-                if tile not in self.BLOCKED_TILES:
-                    agent.x = new_x
-                    agent.y = new_y
+            if self._is_valid_position(new_x, new_y, state):
+                if self._apply_movement(agent, state, new_x, new_y):
                     return True
 
         return False
 
-    def random_move(self, agent, grid):
-        directions = [
-            (1, 0),
-            (-1, 0),
-            (0, 1),
-            (0, -1)
-        ]
+    # =========================
+    # MÉTODOS INTERNOS
+    # =========================
 
-        random.shuffle(directions)
+    def _is_valid_position(self, x, y, state):
 
-        for dx, dy in directions:
-            new_x = agent.x + dx
-            new_y = agent.y + dy
+        # Validar límites
+        if not (0 <= x < len(state.grid[0]) and 0 <= y < len(state.grid)):
+            return False
 
-            if 0 <= new_x < 80 and 0 <= new_y < 72:
-                if grid[new_y][new_x] not in self.BLOCKED_TILES:
-                    agent.x = new_x
-                    agent.y = new_y
-                    return
+        tile = state.grid[y][x]
+
+        # Caso 1: Grid numérico
+        if isinstance(tile, int):
+            return tile not in self.BLOCKED_TILES
+
+        # Caso 2: Grid con Node objects
+        if hasattr(tile, "walkable"):
+            return tile.walkable
+
+        return True
+
+    def _apply_movement(self, agent, state, new_x, new_y):
+
+        tile = state.grid[new_y][new_x]
+
+        # ---------------------------
+        # CASO 1: Grid numérico
+        # ---------------------------
+        if isinstance(tile, int):
+
+            if tile in self.BLOCKED_TILES:
+                return False
+
+            # Costos simples por tipo
+            costo = 1.0
+
+            if tile == 4:      # cultivo
+                costo = 1.5
+            elif tile == 5:    # puente
+                costo = 0.8
+            elif tile == 6:    # puerta
+                costo = 1.0
+
+        # ---------------------------
+        # CASO 2: Grid con Node
+        # ---------------------------
+        else:
+            costo = calcular_costo_movimiento_total(state, new_x, new_y)
+
+        # ---------------------------
+        # Validar energía
+        # ---------------------------
+        if agent.energy < costo:
+            print("Energía insuficiente.")
+            return False
+
+        # Aplicar movimiento
+        agent.energy -= costo
+        agent.x = new_x
+        agent.y = new_y
+
+        return True
