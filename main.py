@@ -1,10 +1,9 @@
 import pygame
 import numpy as np
-from collections import deque
-from world.farm_grid import MAP_DATA, TILE_TYPES
+from world.farm_grid import MAP_DATA, TILE_TYPES, FarmGrid
 from world.node import Node
 from core.state import GameState
-from pathfinding.astar import AStarPathfinder
+from agent.agent import Agent
 from entities.crop import Crop
 
 
@@ -29,7 +28,7 @@ def main():
 
     celda_px = 12
     ancho = 80 * celda_px
-    alto = 65 * celda_px
+    alto = 72 * celda_px
     mapa_img = pygame.transform.scale(mapa_img, (ancho, alto))
     pantalla = pygame.display.set_mode((ancho, alto))
     pygame.display.set_caption("AI Smart Farm")
@@ -47,11 +46,12 @@ def main():
     # Construir grid de Nodes
     mundo = cargar_mapa()
 
-    # Construir GameState
     crops = [
         Crop(50, 40),
         Crop(55, 42),
         Crop(22, 45),
+        Crop(25, 50),
+        Crop(60, 55),
     ]
 
     state = GameState(
@@ -60,23 +60,7 @@ def main():
         crops=crops,
     )
 
-    # Pathfinder
-    pathfinder = AStarPathfinder()
-
-    # Posición inicial del agente
-    agent_x, agent_y = state.farmer_pos
-    current_path = deque()
-
-
-    # Calcular ruta al primer cultivo
-    if crops:
-        gx, gy = crops[0].pos
-        path = pathfinder.find_path(agent_x, agent_y, gx, gy, mundo)
-        if path:
-            current_path = deque(path[1:])
-            print(f"Ruta encontrada: {len(current_path)} pasos hacia {crops[0].pos}")
-        else:
-            print("Sin ruta al cultivo")
+    agente = Agent(30, 10)
 
     clock = pygame.time.Clock()
     ejecutando = True
@@ -86,13 +70,17 @@ def main():
             if evento.type == pygame.QUIT:
                 ejecutando = False
 
-        # Mover agente un paso por tick
-        if current_path:
-            agent_x, agent_y = current_path.popleft()
-            state.farmer_pos = (agent_x, agent_y)
+        # Tick del agente — aqui vive A*
+        agente.update(state)
+        state.farmer_pos = (agente.x, agente.y)
+        state.tick += 1
 
-        # Dibujar mapa de fondo
-        pantalla.blit(mapa_img, (0, 0))
+        # Crecer cultivos cada tick
+        for crop in state.crops:
+            crop.crecer(tasa_secado=1.0, umbral_crecimiento=20.0)
+
+        # Dibujar fondo
+        pantalla.fill((0, 0, 0))
 
         # Dibujar grid
         for fila in mundo:
@@ -102,18 +90,25 @@ def main():
                                  (nodo.x * celda_px, nodo.y * celda_px,
                                   celda_px - 1, celda_px - 1))
 
-        # Dibujar cultivos
+        # Dibujar cultivos encima del grid
         for crop in state.crops:
             cx, cy = crop.pos
-            pygame.draw.rect(pantalla, (0, 200, 0),
-                             (cx * celda_px, cy * celda_px, celda_px - 1, celda_px - 1))
+            if crop.fase == 0:
+                color_crop = (180, 140, 20)   # semilla
+            elif crop.fase == 1:
+                color_crop = (80, 200, 80)    # creciendo
+            else:
+                color_crop = (255, 80, 80)    # listo para cosechar
+            pygame.draw.rect(pantalla, color_crop,
+                             (cx * celda_px + 2, cy * celda_px + 2,
+                              celda_px - 4, celda_px - 4))
 
-        # Superponer imagen
-        #pantalla.blit(mapa_img, (0, 0))
+        # Superponer imagen del mapa
+        pantalla.blit(mapa_img, (0, 0))
 
         # Dibujar agente encima de todo
-        centro = (agent_x * celda_px + celda_px // 2,
-                  agent_y * celda_px + celda_px // 2)
+        centro = (agente.x * celda_px + celda_px // 2,
+                  agente.y * celda_px + celda_px // 2)
         pygame.draw.circle(pantalla, (0, 0, 255), centro, celda_px // 3)
 
         pygame.display.flip()
