@@ -1,38 +1,12 @@
-# main.py
-
 import pygame
 import numpy as np
+from collections import deque
 from world.farm_grid import MAP_DATA, TILE_TYPES
 from world.node import Node
 from core.state import GameState
+from pathfinding.astar import AStarPathfinder
+from entities.crop import Crop
 
-# --- Definición del Agente ---
-class SmartAgent:
-    def __init__(self, start_node):
-        self.current_node = start_node
-        self.x = start_node.x
-        self.y = start_node.y
-        self.path = []
-        # Color azul para el agente
-        self.color = (0, 0, 255)
-
-    def set_path(self, new_path):
-        """Asigna la ruta para el agente"""
-        self.path = new_path
-
-    def update(self, mundo):
-        """Mueve al agente al siguiente nodo de la ruta"""
-        if self.path:
-            next_node = self.path.pop(0)
-            self.current_node = next_node
-            self.x = next_node.x
-            self.y = next_node.y
-
-    def draw(self, pantalla, celda_px):
-        """Dibuja al agente como un círculo sin modificar el fondo"""
-        centro = (self.x * celda_px + celda_px // 2, 
-                  self.y * celda_px + celda_px // 2)
-        pygame.draw.circle(pantalla, self.color, centro, celda_px // 3)
 
 def cargar_mapa():
     grid = []
@@ -44,77 +18,109 @@ def cargar_mapa():
         grid.append(nodos_fila)
     return grid
 
+
 def main():
     pygame.init()
-    # Intenta cargar la imagen, si no existe crea una superficie vacía para evitar errores
+
     try:
         mapa_img = pygame.image.load("assets/map_overlay.png")
     except:
         mapa_img = pygame.Surface((80 * 12, 72 * 12))
-        
-    print("Proyecto IA Granja iniciado")
-    
-    # Configuración de pantalla
+
     celda_px = 12
     ancho = 80 * celda_px
-    alto = 72 * celda_px
-    mapa_img = pygame.transform.scale(mapa_img, (ancho, alto)) 
+    alto = 65 * celda_px
+    mapa_img = pygame.transform.scale(mapa_img, (ancho, alto))
     pantalla = pygame.display.set_mode((ancho, alto))
-    
+    pygame.display.set_caption("AI Smart Farm")
+
     colores = {
-        "pasto": (118, 186, 27),
-        "agua": (74, 163, 223),
-        "acantilado": (142, 112, 72),
-        "edificio": (180, 70, 50),
-        "cultivo": (220, 190, 50),
-        "puente": (150, 100, 50)
+        "pasto":      (118, 186,  27),
+        "agua":       ( 74, 163, 223),
+        "acantilado": (142, 112,  72),
+        "edificio":   (180,  70,  50),
+        "cultivo":    (220, 190,  50),
+        "puente":     (150, 100,  50),
+        "puerta":     (200, 160,  80),
     }
 
+    # Construir grid de Nodes
     mundo = cargar_mapa()
+
+    # Construir GameState
+    crops = [
+        Crop(50, 40),
+        Crop(55, 42),
+        Crop(22, 45),
+    ]
+
+    state = GameState(
+        farmer_pos=(30, 10),
+        grid=mundo,
+        crops=crops,
+    )
+
+    # Pathfinder
+    pathfinder = AStarPathfinder()
+
+    # Posición inicial del agente
+    agent_x, agent_y = state.farmer_pos
+    current_path = deque()
+
+
+    # Calcular ruta al primer cultivo
+    if crops:
+        gx, gy = crops[0].pos
+        path = pathfinder.find_path(agent_x, agent_y, gx, gy, mundo)
+        if path:
+            current_path = deque(path[1:])
+            print(f"Ruta encontrada: {len(current_path)} pasos hacia {crops[0].pos}")
+        else:
+            print("Sin ruta al cultivo")
+
     clock = pygame.time.Clock()
-    
-    # Inicializar Agente
-    agente = SmartAgent(mundo[10][30])
-    
-    # Definir una ruta de ejemplo inicial
-    camino = [mundo[12][i] for i in range(60, 50, -1)] 
-    camino += [mundo[y][50] for y in range(12, 20)]
-    camino += [mundo[20][i] for i in range(50, 30, -1)]
-    camino += [mundo[y][31] for y in range(20, 40)]
-
-    agente = SmartAgent(camino[0])
-    agente.set_path(camino)
-
     ejecutando = True
+
     while ejecutando:
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 ejecutando = False
 
-        # 1. Dibujar fondo negro
-        pantalla.fill((0, 0, 0))
-        
-        # 2. Renderizado del grid (Lógica visual original)
+        # Mover agente un paso por tick
+        if current_path:
+            agent_x, agent_y = current_path.popleft()
+            state.farmer_pos = (agent_x, agent_y)
+
+        # Dibujar mapa de fondo
+        pantalla.blit(mapa_img, (0, 0))
+
+        # Dibujar grid
         for fila in mundo:
             for nodo in fila:
                 color = colores.get(nodo.type_name, (255, 255, 255))
-                pygame.draw.rect(pantalla, color, 
-                                (nodo.x * celda_px, nodo.y * celda_px, 
-                                 celda_px - 1, celda_px - 1))
+                pygame.draw.rect(pantalla, color,
+                                 (nodo.x * celda_px, nodo.y * celda_px,
+                                  celda_px - 1, celda_px - 1))
 
-        # 3. Actualizar y dibujar agente
-        agente.update(mundo)
-        
-        # 4. Superponer imagen (Overlay)
-        pantalla.blit(mapa_img, (0, 0))
-        
-        # 5. Dibujar al agente encima de todo
-        agente.draw(pantalla, celda_px)
-        
+        # Dibujar cultivos
+        for crop in state.crops:
+            cx, cy = crop.pos
+            pygame.draw.rect(pantalla, (0, 200, 0),
+                             (cx * celda_px, cy * celda_px, celda_px - 1, celda_px - 1))
+
+        # Superponer imagen
+        #pantalla.blit(mapa_img, (0, 0))
+
+        # Dibujar agente encima de todo
+        centro = (agent_x * celda_px + celda_px // 2,
+                  agent_y * celda_px + celda_px // 2)
+        pygame.draw.circle(pantalla, (0, 0, 255), centro, celda_px // 3)
+
         pygame.display.flip()
-        clock.tick(5)  # Velocidad controlada (5 FPS)
+        clock.tick(10)
 
     pygame.quit()
+
 
 if __name__ == "__main__":
     main()

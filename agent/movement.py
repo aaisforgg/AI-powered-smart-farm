@@ -1,8 +1,7 @@
 import random
 
-class Movement:
 
-    BLOCKED_TILES = [1, 2, 3]
+class Movement:
 
     def follow_path(self, agent):
         if agent.current_path:
@@ -29,8 +28,7 @@ class Movement:
         new_y = agent.y + move_y
 
         if 0 <= new_x < 80 and 0 <= new_y < 72:
-            tile = grid[new_y][new_x]
-            if tile in self.BLOCKED_TILES:
+            if not grid[new_y][new_x].walkable:
                 return self.change_direction(agent, grid)
             agent.x = new_x
             agent.y = new_y
@@ -47,7 +45,7 @@ class Movement:
             ny = agent.y + dy
 
             if 0 <= nx < 80 and 0 <= ny < 72:
-                if grid[ny][nx] not in self.BLOCKED_TILES:
+                if grid[ny][nx].walkable:
                     agent.x = nx
                     agent.y = ny
                     return True
@@ -63,7 +61,7 @@ class Movement:
             ny = agent.y + dy
 
             if 0 <= nx < 80 and 0 <= ny < 72:
-                if grid[ny][nx] not in self.BLOCKED_TILES:
+                if grid[ny][nx].walkable:
                     agent.x = nx
                     agent.y = ny
                     return
