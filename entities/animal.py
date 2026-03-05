@@ -3,6 +3,7 @@ class Animal:
         self.especie = especie
         self.pos = (x, y)
         self.peso_producto = peso_producto
+        self.hambre = 0
 
     def alimentar(self):
         self.hambre = 0
