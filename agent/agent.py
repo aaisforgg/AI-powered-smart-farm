@@ -3,6 +3,8 @@ from .decision import DecisionSystem
 from .movement import Movement
 from pathfinding.astar import AStarPathfinder
 
+REPLAN_INTERVAL = 5
+
 class Agent:
 
     def __init__(self, x, y):
@@ -15,10 +17,15 @@ class Agent:
         self.decision_system = DecisionSystem()
         self.movement = Movement()
         self.pathfinder = AStarPathfinder()
-
+    
     def update(self, state):
         if self.needs_replan:
             self._reset_goal()
+
+        if self.goal and state.tick % REPLAN_INTERVAL == 0:
+            mejor, _ = self.decision_system.decide(state, self)
+            if mejor and mejor != self.goal:
+                self._reset_goal()
 
         if not self.goal:
             self.goal, self.strategy = self.decision_system.decide(state, self)

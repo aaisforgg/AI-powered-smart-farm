@@ -52,20 +52,14 @@ class AStarPathfinder(Pathfinder):
         
         return None
     
-    def _get_neighbors(
-        self, x: int, y: int, rows: int, cols: int, grid: list[list]
-    ) -> list[tuple[int, int, float]]:
-        """
-            Devuelve vecinos válidos como (x, y, costo). Solo 4 direcciones.
-
-        """
+    def _get_neighbors(self, x, y, rows, cols, grid):
         directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
         neighbors = []
         
         for dx, dy in directions:
             nx, ny = x + dx, y + dy
             
-            if 0 <= nx < rows and 0 <= ny < cols:
+            if 0 <= nx < cols and 0 <= ny < rows:  # ← cols para x, rows para y
                 node = grid[ny][nx]
                 if node.walkable:
                     neighbors.append((nx, ny, node.cost))

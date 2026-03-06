@@ -26,4 +26,4 @@ class StrategyManager:
         if goal.fase >= 2:
             return "HARVEST"
 
-        return None   # en crecimiento, sin acción
+        return "WATER"   # en crecimiento, sin acción
