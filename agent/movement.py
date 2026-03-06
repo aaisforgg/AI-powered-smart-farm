@@ -1,6 +1,5 @@
 import random
 
-
 class Movement:
 
     def follow_path(self, agent):

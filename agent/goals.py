@@ -4,7 +4,6 @@ class GoalManager:
     Trabaja con objetos Crop que tienen .pos, .humedad y .fase.
     """
 
-    # Menor número = más urgente
     PRIORITY = {
         "WATER":   1,
         "PLANT":   2,
@@ -23,7 +22,7 @@ class GoalManager:
         for crop in state.crops:
             strategy = self._evaluate_crop(crop)
             if strategy is None:
-                continue   # este cultivo no necesita atención ahora
+                continue
 
             cx, cy  = crop.pos
             dist    = abs(cx - agent.x) + abs(cy - agent.y)
@@ -46,10 +45,10 @@ class GoalManager:
         if crop.humedad < 30:
             return "WATER"
 
-        if crop.fase == 0:
-            return "PLANT"
-
         if crop.fase >= 2:
             return "HARVEST"
 
-        return None   # fase 1 → creciendo, sin acción necesaria
+        if crop.fase == 0:
+            return "PLANT"
+
+        return "WATER"

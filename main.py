@@ -53,8 +53,8 @@ def main():
         Crop(60, 55),
     ]
 
-    crops[0].humedad = 10.0   # necesita agua urgente
-    crops[1].fase = 2          # listo para cosechar
+    crops[0].humedad = 10.0
+    crops[1].fase = 2
     
     state = GameState(
         farmer_pos=(30, 10),

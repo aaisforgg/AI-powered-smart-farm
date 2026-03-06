@@ -34,21 +34,14 @@ class Agent:
 
         if self.current_path:
             self.movement.follow_path(self)
+            if not self.current_path and self.goal:
+                gx, gy = self.goal.pos
+                if (self.x, self.y) == (gx, gy):
+                    self._execute_strategy(state)
+                    self._reset_goal()
             return
-
-        if self.goal:
-            gx, gy = self.goal.pos
-            if (self.x, self.y) == (gx, gy):
-                self._execute_strategy(state)
-                self._reset_goal()
-                return
-            path = self.pathfinder.find_path(self.x, self.y, gx, gy, state.grid)
-            if path:
-                self.current_path = deque(path[1:])
-            else:
-                self._reset_goal()
-        else:
-            self.movement.random_move(self, state.grid)
+        
+        self.movement.random_move(self, state.grid)
 
     def _execute_strategy(self, state):
         if not self.strategy or not self.goal:
@@ -60,7 +53,7 @@ class Agent:
         elif self.strategy == "PLANT":
             crop.fase = 1
         elif self.strategy == "HARVEST":
-            state.farmer_inventory.append(("crop", crop.pos))
+            state.farmer_inventory.append(crop)
             state.crops.remove(crop)
             print(f"[Agent] Cosechado {crop.pos} | inventario: {len(state.farmer_inventory)}")
 
