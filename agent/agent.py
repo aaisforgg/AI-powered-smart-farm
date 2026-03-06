@@ -27,7 +27,9 @@ class Agent:
                 path = self.pathfinder.find_path(self.x, self.y, gx, gy, state.grid)
                 if path:
                     self.current_path = deque(path[1:])
+                    print(f"[Agent] Ruta calculada a {self.goal.pos} — {len(self.current_path)} pasos")
                 else:
+                    print(f"[Agent] Sin ruta a {self.goal.pos}")
                     self._reset_goal()
 
         if self.current_path:
@@ -52,6 +54,7 @@ class Agent:
         if not self.strategy or not self.goal:
             return
         crop = self.goal
+        print(f"[Agent] Ejecutando '{self.strategy}' en {crop.pos} | humedad={crop.humedad:.1f} fase={crop.fase}")
         if self.strategy == "WATER":
             crop.humedad = min(100.0, crop.humedad + 50.0)
         elif self.strategy == "PLANT":
@@ -59,6 +62,7 @@ class Agent:
         elif self.strategy == "HARVEST":
             state.farmer_inventory.append(("crop", crop.pos))
             state.crops.remove(crop)
+            print(f"[Agent] Cosechado {crop.pos} | inventario: {len(state.farmer_inventory)}")
 
     def _reset_goal(self):
         self.goal = None

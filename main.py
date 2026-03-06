@@ -53,6 +53,9 @@ def main():
         Crop(60, 55),
     ]
 
+    crops[0].humedad = 10.0   # necesita agua urgente
+    crops[1].fase = 2          # listo para cosechar
+    
     state = GameState(
         farmer_pos=(30, 10),
         grid=mundo,
@@ -71,6 +74,7 @@ def main():
 
         # Tick del agente — aqui vive A*
         agente.update(state)
+        print(f"Agente: ({agente.x}, {agente.y}) | goal: {agente.goal} | path: {len(agente.current_path)}")
         state.farmer_pos = (agente.x, agente.y)
         state.tick += 1
 
