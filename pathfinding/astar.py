@@ -5,10 +5,8 @@ from pathfinding.heuristics import ManhattanHeuristic
 
 class AStarPathfinder(Pathfinder):
     """
-        Implementación de A* para grids 2D.
-        Recibe cualquier heurística — por defecto usa Manhattan.
-        No sabe nada del agente, entidades ni estaciones.
-        Solo recibe un grid, un inicio y una meta, y devuelve una ruta.
+    Implementación de A* para grids 2D.
+    Recibe cualquier heurística — por defecto usa Manhattan.
     """
     
     def __init__(self, heuristic: Optional[HeuristicStrategy] = None):
@@ -23,10 +21,12 @@ class AStarPathfinder(Pathfinder):
         grid: list[list],
     ) -> Optional[list[tuple[int, int]]]:
         
+        # En una lista de listas, rows es la altura (y) y cols el ancho (x)
         rows = len(grid)
         cols = len(grid[0])
         
         open_heap = []
+        # El heap guarda (f_cost, x, y)
         heapq.heappush(open_heap, (0, start_x, start_y))
         
         came_from: dict[tuple, Optional[tuple]] = {(start_x, start_y): None}
@@ -35,6 +35,7 @@ class AStarPathfinder(Pathfinder):
         while open_heap:
             _, cx, cy = heapq.heappop(open_heap)
             
+            # Si llegamos a la meta
             if (cx, cy) == (goal_x, goal_y):
                 return self._reconstruct_path(came_from, goal_x, goal_y)
             
@@ -56,8 +57,7 @@ class AStarPathfinder(Pathfinder):
         self, x: int, y: int, rows: int, cols: int, grid: list[list]
     ) -> list[tuple[int, int, float]]:
         """
-            Devuelve vecinos válidos como (x, y, costo). Solo 4 direcciones.
-
+        Devuelve vecinos válidos como (x, y, costo).
         """
         directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
         neighbors = []
@@ -65,14 +65,17 @@ class AStarPathfinder(Pathfinder):
         for dx, dy in directions:
             nx, ny = x + dx, y + dy
             
-            if 0 <= nx < rows and 0 <= ny < cols:
-<<<<<<< HEAD
-                node = grid[nx][ny]
-=======
+            # Verificamos límites: nx debe estar en cols (ancho) y ny en rows (alto)
+            if 0 <= nx < cols and 0 <= ny < rows:
+                # Obtenemos el nodo del grid
                 node = grid[ny][nx]
->>>>>>> bcd1ae66cee3a70be2247d80ec975f4464690ee7
+                
+                # Verificamos si es caminable usando el atributo del objeto Node
                 if node.walkable:
-                    neighbors.append((nx, ny, node.cost))
+                    # Usamos el costo del nodo si existe, si no, por defecto 1.0
+                    cost = getattr(node, 'cost', 1.0)
+                    neighbors.append((nx, ny, cost))
+                    
         return neighbors
     
     def _reconstruct_path(
@@ -82,16 +85,14 @@ class AStarPathfinder(Pathfinder):
         goal_y: int,
     ) -> list[tuple[int, int]]:
         """
-           Reconstruye la ruta de atrás hacia adelante. 
+        Reconstruye la ruta de atrás hacia adelante. 
         """
-        
         path = []
         current = (goal_x, goal_y)
         
         while current is not None:
             path.append(current)
-            current = came_from[current]
+            current = came_from.get(current)
             
         path.reverse()
-        
         return path
