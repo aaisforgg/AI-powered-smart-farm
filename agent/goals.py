@@ -1,23 +1,55 @@
-#goals.py
 class GoalManager:
+    """
+    Elige el cultivo más urgente para el agente.
+    Trabaja con objetos Crop que tienen .pos, .humedad y .fase.
+    """
 
-    def choose_goal(self, grid):
-        dry_crops = []
-        empty_tiles = []
+    # Menor número = más urgente
+    PRIORITY = {
+        "WATER":   1,
+        "PLANT":   2,
+        "HARVEST": 3,
+    }
 
-        for y in range(72):
-            for x in range(80):
+    def choose_goal(self, state, agent):
+        """
+        Retorna el Crop más prioritario y cercano, o None si no hay nada que hacer.
+        """
+        if not state.crops:
+            return None
 
-                if grid[y][x] == 2:
-                    dry_crops.append((x, y))
+        candidates = []
 
-                elif grid[y][x] == 0:
-                    empty_tiles.append((x, y))
+        for crop in state.crops:
+            strategy = self._evaluate_crop(crop)
+            if strategy is None:
+                continue   # este cultivo no necesita atención ahora
 
-        if dry_crops:
-            return min(dry_crops, key=lambda pos: abs(pos[0]) + abs(pos[1]))
+            cx, cy  = crop.pos
+            dist    = abs(cx - agent.x) + abs(cy - agent.y)
+            priority = self.PRIORITY.get(strategy, 99)
+            candidates.append((priority, dist, crop))
 
-        if empty_tiles:
-            return min(empty_tiles, key=lambda pos: abs(pos[0]) + abs(pos[1]))
+        if not candidates:
+            return None
 
-        return None
+        # Primero por urgencia, luego por cercanía
+        candidates.sort(key=lambda c: (c[0], c[1]))
+        return candidates[0][2]
+
+    # ------------------------------------------------------------------
+    def _evaluate_crop(self, crop):
+        """
+        Devuelve la estrategia que necesita el cultivo, o None si está bien.
+        Basado en los atributos reales de Crop: .humedad y .fase
+        """
+        if crop.humedad < 30:
+            return "WATER"
+
+        if crop.fase == 0:
+            return "PLANT"
+
+        if crop.fase >= 2:
+            return "HARVEST"
+
+        return None   # fase 1 → creciendo, sin acción necesaria

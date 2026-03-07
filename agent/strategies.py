@@ -1,16 +1,29 @@
-#strategies.py
 class StrategyManager:
+    """
+    Determina qué acción ejecutar sobre un Crop dado.
+    Misma lógica que GoalManager._evaluate_crop pero desde el punto
+    de vista de la estrategia: se llama DESPUÉS de elegir el goal.
+    """
 
-    def choose_strategy(self, grid, goal):
-        if not goal:
+    def choose_strategy(self, state, goal):
+        """
+        Retorna "WATER" | "PLANT" | "HARVEST" | None.
+        goal es un objeto Crop con .humedad y .fase.
+        """
+        if goal is None:
             return None
 
-        x, y = goal
+        # Verificar que sea un Crop válido
+        if not (hasattr(goal, "humedad") and hasattr(goal, "fase")):
+            return None
 
-        if grid[y][x] == 2:
+        if goal.humedad < 30:
             return "WATER"
 
-        if grid[y][x] == 0:
+        if goal.fase == 0:
             return "PLANT"
 
-        return None
+        if goal.fase >= 2:
+            return "HARVEST"
+
+        return None   # en crecimiento, sin acción
