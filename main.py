@@ -7,7 +7,7 @@ from agent.agent import Agent
 from entities.crop import Crop
 
 
-def cargar_mapa():
+def cargar_mapa_logico():
     grid = []
     for y, fila in enumerate(MAP_DATA):
         nodos_fila = []
@@ -20,11 +20,31 @@ def cargar_mapa():
 
 def main():
     pygame.init()
+    celda_px = 12
+    ancho, alto = 80 * celda_px, 72 * celda_px
+    pantalla = pygame.display.set_mode((ancho, alto))
+    pygame.display.set_caption("AI Smart Farm - Seasonal World")
 
-    try:
-        mapa_img = pygame.image.load("assets/map_overlay.png")
-    except:
-        mapa_img = pygame.Surface((80 * 12, 72 * 12))
+    # --- 1. CARGAR DICCIONARIO DE MAPAS ---
+    # Cargamos todas las versiones del mapa para no leer el disco en cada frame
+    fondos = {}
+    rutas_mapas = {
+        "Primavera": "assets/map_overlay.png",
+        "Verano": "assets/map_verano.jpeg",
+        "Otoño": "assets/map_otoño.jpeg",
+        "Invierno": "assets/map_invierno.jpeg"
+    }
+
+    for estacion, ruta in rutas_mapas.items():
+        try:
+            img = pygame.image.load(ruta).convert_alpha()
+            fondos[estacion] = pygame.transform.scale(img, (ancho, alto))
+            print(f"✅ Mapa de {estacion} cargado.")
+        except:
+            print(f"⚠️ No se encontró {ruta}, se usará el mapa base.")
+            # Fallback al mapa base si uno falta
+            if "Primavera" in fondos:
+                fondos[estacion] = fondos["Primavera"]
 
     celda_px = 12
     ancho = 80 * celda_px
@@ -43,25 +63,9 @@ def main():
         "puerta":     (200, 160,  80),
     }
 
-    mundo = cargar_mapa()
-
-    crops = [
-        Crop(50, 40),
-        Crop(55, 42),
-        Crop(22, 45),
-        Crop(25, 50),
-        Crop(60, 55),
-    ]
-
-    crops[0].humedad = 10.0   # necesita agua urgente
-    crops[1].fase = 2          # listo para cosechar
-    
-    state = GameState(
-        farmer_pos=(30, 10),
-        grid=mundo,
-        crops=crops,
-    )
-
+    mundo = cargar_mapa_logico()
+    crops = [Crop(50, 40), Crop(55, 42), Crop(22, 45), Crop(25, 50), Crop(60, 55)]
+    state = GameState(farmer_pos=(30, 10), grid=mundo, crops=crops)
     agente = Agent(30, 10)
 
     clock = pygame.time.Clock()
@@ -85,13 +89,11 @@ def main():
         # Dibujar fondo
         pantalla.fill((0, 0, 0))
 
-        # Dibujar grid
-        for fila in mundo:
-            for nodo in fila:
-                color = colores.get(nodo.type_name, (255, 255, 255))
-                pygame.draw.rect(pantalla, color,
-                                 (nodo.x * celda_px, nodo.y * celda_px,
-                                  celda_px - 1, celda_px - 1))
+        # 1. DIBUJAR FONDO DINÁMICO
+        # Selecciona el fondo según la estación actual
+        fondo_actual = fondos.get(clima, fondos.get("Primavera"))
+        if fondo_actual:
+            pantalla.blit(fondo_actual, (0, 0))
 
         # Dibujar cultivos encima del grid
         for crop in state.crops:
@@ -106,12 +108,32 @@ def main():
                              (cx * celda_px + 2, cy * celda_px + 2,
                               celda_px - 4, celda_px - 4))
 
-        # Superponer imagen del mapa
-        pantalla.blit(mapa_img, (0, 0))
+        # 3. FILTRO ATMOSFÉRICO (Sutil para no tapar los mapas nuevos)
+        weather_overlay.fill((0, 0, 0, 0))
+        if clima == "Invierno":
+            weather_overlay.fill((150, 200, 255, 40)) # Muy suave, el mapa ya es blanco
+        elif clima == "Verano":
+            weather_overlay.fill((255, 200, 0, 20))
+        elif clima == "Otoño":
+            weather_overlay.fill((180, 100, 0, 30))
+        
+        if evento_activo == "Tormenta":
+            weather_overlay.fill((10, 10, 40, 120))
+        elif evento_activo == "Sequía":
+            weather_overlay.fill((255, 50, 0, 30))
+        
+        pantalla.blit(weather_overlay, (0, 0))
 
-        # Dibujar agente encima de todo
-        centro = (agente.x * celda_px + celda_px // 2,
-                  agente.y * celda_px + celda_px // 2)
+        # 4. PARTÍCULAS
+        if clima == "Invierno" or evento_activo == "Tormenta":
+            p_color = (255, 255, 255) if clima == "Invierno" else (100, 100, 255)
+            for p in particulas:
+                p.caer()
+                pygame.draw.line(pantalla, p_color, (p.x, p.y), (p.x, p.y + 2), 1)
+
+        # 5. AGENTE
+        centro = (agente.x * celda_px + celda_px // 2, agente.y * celda_px + celda_px // 2)
+        pygame.draw.circle(pantalla, (255, 255, 255), centro, celda_px // 2) 
         pygame.draw.circle(pantalla, (0, 0, 255), centro, celda_px // 3)
 
         pygame.display.flip()
