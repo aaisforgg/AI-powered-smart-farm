@@ -45,7 +45,7 @@ class AStarPathfinder(Pathfinder):
                     g_cost[(nx, ny)] = new_g
                     
                     h = self.heuristic.calculate(nx, ny, goal_x, goal_y)
-                    f = new_g + h
+                    f = new_g + h * 1.001 
                     
                     heapq.heappush(open_heap, (f, nx, ny))
                     came_from[(nx, ny)] = (cx, cy)
