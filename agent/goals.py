@@ -24,7 +24,7 @@ class GoalManager:
             if strategy is None:
                 continue
 
-            if (strategy, crop.pos) in recent_actions:
+            if strategy != "HARVEST" and(strategy, crop.pos) in recent_actions:
                 continue
 
             cx, cy = crop.pos
@@ -49,5 +49,5 @@ class GoalManager:
             return "WATER"
         if crop.fase == 0:
             return "PLANT"
-        
-        return "WATER"
+    
+        return None
