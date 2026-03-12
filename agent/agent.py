@@ -2,7 +2,7 @@ from collections import deque
 from .decision import DecisionSystem
 from .movement import Movement
 from pathfinding.astar import AStarPathfinder
-
+from .genetics import Genes
 
 class Agent:
 
@@ -19,6 +19,20 @@ class Agent:
         self.decision_system = DecisionSystem()
         self.movement = Movement()
         self.pathfinder = AStarPathfinder()
+        
+        self.genes = Genes()
+
+        # ===============================
+        # ENERGIA DEL AGENTE
+        # ===============================
+
+        self.energy = self.genes.energy_max
+        self.max_energy = self.genes.energy_max
+
+        self.energy_threshold = 25.0
+        self.energy_recovery = 4.0
+
+        self.resting = False
 
         # ===============================
         # MEMORIA DEL AGENTE
@@ -34,6 +48,9 @@ class Agent:
             # memoria de recursos
             "known_crops": {},
 
+            # memoria de casas
+            "home_tiles": set(),
+
             # memoria episódica
             "episodes": deque(maxlen=50),
 
@@ -43,18 +60,39 @@ class Agent:
 
     def update(self, state):
 
+        tile = state.grid[self.y][self.x]
+
+        # ===============================
+        # DESCANSO EN CASA
+        # ===============================
+
+        if self.resting and tile.type_name == "casa":
+
+            self.energy += self.genes.energy_recovery
+
+            print(f"[Agent] Descansando... energia={self.energy:.1f}")
+
+            if self.energy >= self.max_energy:
+                self.energy = self.max_energy
+                self.resting = False
+                print("[Agent] Energia completa. Volviendo al trabajo")
+
+            return
+
         # ===============================
         # MEMORIA ESPACIAL
         # ===============================
 
         self.memory["visited_tiles"].add((self.x, self.y))
 
-        tile = state.grid[self.y][self.x]
-
         if tile.walkable:
             self.memory["known_walkable"].add((self.x, self.y))
         else:
             self.memory["known_blocked"].add((self.x, self.y))
+
+        # detectar casa
+        if tile.type_name == "casa":
+            self.memory["home_tiles"].add((self.x, self.y))
 
         # ===============================
         # MEMORIA DE RECURSOS
@@ -62,6 +100,32 @@ class Agent:
 
         for crop in state.crops:
             self.memory["known_crops"][crop.pos] = crop
+
+        # ===============================
+        # ENERGIA BAJA → VOLVER A CASA
+        # ===============================
+
+        if self.energy <= self.energy_threshold and not self.resting:
+
+            if self.memory["home_tiles"]:
+
+                hx, hy = next(iter(self.memory["home_tiles"]))
+
+                print("[Agent] Energia baja → volviendo a casa")
+
+                self.goal = None
+                self.strategy = None
+                self.current_path.clear()
+
+                path = self.pathfinder.find_path(
+                    self.x, self.y, hx, hy, state.grid
+                )
+
+                if path:
+                    self.current_path = deque(path[1:])
+                    self.resting = True
+
+                return
 
         # ===============================
         # REPLAN
@@ -96,7 +160,18 @@ class Agent:
         # ===============================
 
         if self.current_path:
+
+            old_pos = (self.x, self.y)
+
             self.movement.follow_path(self)
+
+            # consumir energía
+            tile = state.grid[self.y][self.x]
+            self.energy -= tile.cost * self.genes.energy_consumption
+
+            if self.energy < 0:
+                self.energy = 0
+
             return
 
         # ===============================
@@ -154,6 +229,7 @@ class Agent:
         # ===============================
 
         print(f"[Agent] Ejecutando '{self.strategy}' en {crop.pos} | humedad={crop.humedad:.1f} fase={crop.fase}")
+
         if self.strategy == "WATER":
 
             crop.humedad = min(100.0, crop.humedad + 50.0)
@@ -166,7 +242,8 @@ class Agent:
 
             state.farmer_inventory.append(("crop", crop.pos))
             state.crops.remove(crop)
-             print(f"[Agent] Cosechado {crop.pos} | inventario: {len(state.farmer_inventory)}")
+
+            print(f"[Agent] Cosechado {crop.pos} | inventario: {len(state.farmer_inventory)}")
 
             # eliminar de memoria
             if crop.pos in self.memory["known_crops"]:
