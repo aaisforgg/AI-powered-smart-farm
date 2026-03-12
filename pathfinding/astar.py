@@ -65,7 +65,7 @@ class AStarPathfinder(Pathfinder):
         for dx, dy in directions:
             nx, ny = x + dx, y + dy
             
-            if 0 <= nx < rows and 0 <= ny < cols:
+            if 0 <= nx < cols and 0 <= ny < rows:
                 node = grid[ny][nx]
                 if node.walkable:
                     neighbors.append((nx, ny, node.cost))
