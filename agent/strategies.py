@@ -13,9 +13,11 @@ class StrategyManager:
         if goal is None:
             return None
 
-        # Verificar que sea un Crop válido
         if not (hasattr(goal, "humedad") and hasattr(goal, "fase")):
             return None
+
+        if goal.fase >= 2:
+            return "HARVEST"
 
         if goal.humedad < 30:
             return "WATER"
@@ -23,7 +25,4 @@ class StrategyManager:
         if goal.fase == 0:
             return "PLANT"
 
-        if goal.fase >= 2:
-            return "HARVEST"
-
-        return None   # en crecimiento, sin acción
+        return "WATER"  

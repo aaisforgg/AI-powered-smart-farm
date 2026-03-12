@@ -45,7 +45,7 @@ class AStarPathfinder(Pathfinder):
                     g_cost[(nx, ny)] = new_g
                     
                     h = self.heuristic.calculate(nx, ny, goal_x, goal_y)
-                    f = new_g + h
+                    f = new_g + h * 1.001 
                     
                     heapq.heappush(open_heap, (f, nx, ny))
                     came_from[(nx, ny)] = (cx, cy)
@@ -65,7 +65,7 @@ class AStarPathfinder(Pathfinder):
         for dx, dy in directions:
             nx, ny = x + dx, y + dy
             
-            if 0 <= nx < rows and 0 <= ny < cols:
+            if 0 <= nx < cols and 0 <= ny < rows:
                 node = grid[ny][nx]
                 if node.walkable:
                     neighbors.append((nx, ny, node.cost))

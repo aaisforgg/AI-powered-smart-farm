@@ -22,7 +22,49 @@ def main():
     alto = 65 * celda_px
 
     pantalla = pygame.display.set_mode((ancho, alto))
-    pygame.display.set_caption("Mapa")
+    pygame.display.set_caption("AI Smart Farm")
+
+    # ==========================
+    # CARGAR MAPA
+    # ==========================
+
+    mundo = cargar_mapa_logico()
+
+    # ==========================
+    # SPAWN RANDOM DEL AGENTE
+    # ==========================
+
+    spawn_x, spawn_y = posicion_random_valida(mundo)
+
+    print(f"Spawn del agente: ({spawn_x}, {spawn_y})")
+
+    agente = Agent(spawn_x, spawn_y)
+
+    # ==========================
+    # CULTIVOS
+    # ==========================
+
+    crops = [
+        Crop(50, 40),
+        Crop(55, 42),
+        Crop(22, 45),
+        Crop(25, 50),
+        Crop(62, 58),
+    ]
+
+    # ==========================
+    # GAME STATE
+    # ==========================
+
+    state = GameState(
+        farmer_pos=(agente.x, agente.y),
+        grid=mundo,
+        crops=crops
+    )
+
+    # ==========================
+    # COLORES
+    # ==========================
 
     colores = {
         "pasto":      (118, 186, 27),

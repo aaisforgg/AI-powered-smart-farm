@@ -1,9 +1,9 @@
 class GoalManager:
 
     PRIORITY = {
-        "WATER": 1,
-        "PLANT": 2,
-        "HARVEST": 3
+        "HARVEST": 1,
+        "WATER":   2,
+        "PLANT":   3,
     }
 
     def choose_goal(self, state, agent):
@@ -24,7 +24,7 @@ class GoalManager:
             if strategy is None:
                 continue
 
-            if (strategy, crop.pos) in recent_actions:
+            if strategy != "HARVEST" and(strategy, crop.pos) in recent_actions:
                 continue
 
             cx, cy = crop.pos
@@ -43,14 +43,11 @@ class GoalManager:
         return candidates[0][2]
 
     def _evaluate_crop(self, crop):
-
-        if crop.humedad < 30:
-            return "WATER"
-
-        if crop.fase == 0:
-            return "PLANT"
-
         if crop.fase >= 2:
             return "HARVEST"
-
+        if crop.humedad < 30:
+            return "WATER"
+        if crop.fase == 0:
+            return "PLANT"
+    
         return None

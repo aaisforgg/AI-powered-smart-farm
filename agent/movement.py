@@ -14,39 +14,55 @@ class Movement:
 
     def explore(self, agent, grid):
 
-        directions = [(1,0),(-1,0),(0,1),(0,-1)]
+        rows = len(grid)
+        cols = len(grid[0])
 
-        random.shuffle(directions)
+        directions = [
+            agent.dir,        # seguir igual
+            (1,0),(-1,0),(0,1),(0,-1)
+        ]
 
-        # buscar tiles no visitados
+        # quitar duplicados
+        directions = list(dict.fromkeys(directions))
 
+        # pequeña aleatoriedad
+        if random.random() < 0.3:
+            random.shuffle(directions)
+
+# ---------- Buscar tiles no visitados ----------
         for dx, dy in directions:
 
             nx = agent.x + dx
             ny = agent.y + dy
 
-            if 0 <= nx < 80 and 0 <= ny < 72:
+            if 0 <= nx < cols and 0 <= ny < rows:
 
                 if not grid[ny][nx].walkable:
                     continue
 
-                if (nx,ny) not in agent.memory["visited_tiles"]:
+                if (nx, ny) in agent.memory["visited_tiles"]:
+                    continue
 
-                    agent.x = nx
-                    agent.y = ny
-                    return
+                agent.x = nx
+                agent.y = ny
 
-        # si todo fue visitado moverse normal
+                agent.dir = (dx, dy)
 
+                return
+            
+    # ---------- Si todo fue visitado ----------
         for dx, dy in directions:
 
             nx = agent.x + dx
             ny = agent.y + dy
 
-            if 0 <= nx < 80 and 0 <= ny < 72:
+            if 0 <= nx < cols and 0 <= ny < rows:
 
-                if grid[ny][nx].walkable:
+                if not grid[ny][nx].walkable:
+                    continue
 
-                    agent.x = nx
-                    agent.y = ny
-                    return
+                agent.x = nx
+                agent.y = ny
+                agent.dir = (dx, dy)
+
+                return
