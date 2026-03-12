@@ -366,6 +366,14 @@ for x in range(48,56):
         
 for x in range(51,56):
         MAP_DATA[53][x] = 4 
+        
+MAP_DATA[41][59] = 4 
+MAP_DATA[44][58] = 4 
+MAP_DATA[42][65] = 4 
+MAP_DATA[41][69] = 4
+MAP_DATA[44][69] = 4 
+MAP_DATA[41][73] = 4
+MAP_DATA[44][73] = 4
 
 # WIDTH = 80
 # HEIGHT = 72
