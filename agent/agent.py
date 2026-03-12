@@ -86,7 +86,9 @@ class Agent:
 
                 if path:
                     self.current_path = deque(path[1:])
+                    print(f"[Agent] Ruta calculada a {self.goal.pos} — {len(self.current_path)} pasos")
                 else:
+                    print(f"[Agent] Sin ruta a {self.goal.pos}")
                     self._reset_goal()
 
         # ===============================
@@ -151,6 +153,7 @@ class Agent:
         # ACCIONES
         # ===============================
 
+        print(f"[Agent] Ejecutando '{self.strategy}' en {crop.pos} | humedad={crop.humedad:.1f} fase={crop.fase}")
         if self.strategy == "WATER":
 
             crop.humedad = min(100.0, crop.humedad + 50.0)
@@ -162,9 +165,8 @@ class Agent:
         elif self.strategy == "HARVEST":
 
             state.farmer_inventory.append(("crop", crop.pos))
-
-            if crop in state.crops:
-                state.crops.remove(crop)
+            state.crops.remove(crop)
+             print(f"[Agent] Cosechado {crop.pos} | inventario: {len(state.farmer_inventory)}")
 
             # eliminar de memoria
             if crop.pos in self.memory["known_crops"]:
