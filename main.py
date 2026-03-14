@@ -6,58 +6,68 @@ from world.node import Node
 from core.state import GameState
 from agent.agent import Agent
 from entities.crop import Crop
-from pathfinding.astar import AStarPathfinder
 
 
 def cargar_mapa():
+
     grid = []
+
     for y, fila in enumerate(MAP_DATA):
+
         nodos_fila = []
+
         for x, tile_id in enumerate(fila):
+
             nombre = TILE_TYPES.get(tile_id, "pasto")
+
             nodos_fila.append(Node(x, y, tile_id, nombre))
+
         grid.append(nodos_fila)
+
     return grid
 
 
-def posicion_random_valida(grid):
-    alto = len(grid)
-    ancho = len(grid[0])
+def spawn_crops(grid, cantidad=10):
 
-    while True:
-        x = random.randint(0, ancho - 1)
-        y = random.randint(0, alto - 1)
+    crops = []
 
-        nodo = grid[y][x]
+    tipos = ["maiz", "zanahoria", "trigo"]
 
-        if nodo.type_name not in ["agua", "acantilado", "edificio"]:
-            return x, y
+    for _ in range(cantidad):
+
+        while True:
+
+            x = random.randint(0, len(grid[0]) - 1)
+            y = random.randint(0, len(grid) - 1)
+
+            nodo = grid[y][x]
+
+            if nodo.type_name == "cultivo":
+
+                tipo = random.choice(tipos)
+
+                crop = Crop(x, y, tipo)
+
+                # fase aleatoria
+                crop.fase = random.randint(0, 3)
+
+                # humedad aleatoria
+                crop.humedad = random.uniform(10, 100)
+
+                crops.append(crop)
+
+                break
+
+    return crops
 
 
-def posicion_random_cultivo(grid):
-    alto = len(grid)
-    ancho = len(grid[0])
+def encontrar_spawn(grid):
 
-    while True:
-        x = random.randint(0, ancho - 1)
-        y = random.randint(0, alto - 1)
+    for fila in grid:
+        for nodo in fila:
 
-        nodo = grid[y][x]
-
-        if nodo.type_name == "cultivo":
-            return x, y
-
-
-def _spawn_crops():
-    """Crea la lista inicial de cultivos. Se llama al inicio y en cada nueva vida."""
-    from entities.crop import Crop
-    return [
-        Crop(50, 40),
-        Crop(55, 42),
-        Crop(22, 45),
-        Crop(25, 50),
-        Crop(62, 58),
-    ]
+            if nodo.type_name == "casa":
+                return nodo.x, nodo.y
 
 
 def main():
@@ -65,51 +75,26 @@ def main():
     pygame.init()
 
     celda_px = 12
+
     ancho = 80 * celda_px
     alto = 65 * celda_px
 
     pantalla = pygame.display.set_mode((ancho, alto))
+
     pygame.display.set_caption("AI Smart Farm")
 
     mundo = cargar_mapa()
 
-    pathfinder = AStarPathfinder()
+    spawn_x, spawn_y = encontrar_spawn(mundo)
 
-    # ==========================
-    # SPAWN DEL AGENTE
-    # ==========================
+    # agente con generador de cultivos
+    agente = Agent(
+        spawn_x,
+        spawn_y,
+        crop_factory=lambda: spawn_crops(mundo, 3)
+    )
 
-    spawn_x, spawn_y = posicion_random_valida(mundo)
-
-    print(f"Spawn del agente: ({spawn_x}, {spawn_y})")
-
-    agente = Agent(spawn_x, spawn_y, crop_factory=_spawn_crops)
-
-    # ==========================
-    # CREAR CROPS
-    # ==========================
-
-    crops = []
-
-    for _ in range(10):
-        x, y = posicion_random_cultivo(mundo)
-        crops.append(Crop(x, y))
-
-    # ==========================
-    # OBJETIVO PARA A*
-    # ==========================
-
-    objetivo = crops[0]
-
-    # ==========================
-    # CALCULAR PATH
-    # ==========================
-
-    crops = _spawn_crops()
-
-    # ==========================
-    # GAME STATE
-    # ==========================
+    crops = spawn_crops(mundo, 3)
 
     state = GameState(
         farmer_pos=(agente.x, agente.y),
@@ -118,48 +103,57 @@ def main():
     )
 
     colores = {
-        "pasto":      (118, 186, 27),
-        "agua":       (74, 163, 223),
-        "acantilado": (142, 112, 72),
-        "edificio":   (180, 70, 50),
-        "cultivo":    (220, 190, 50),
-        "puente":     (150, 100, 50),
-        "puerta":     (200, 160, 80),
-        "casa":       (200, 100, 100),
+        "pasto":      (118,186,27),
+        "agua":       (74,163,223),
+        "acantilado": (142,112,72),
+        "edificio":   (180,70,50),
+        "cultivo":    (220,190,50),
+        "puente":     (150,100,50),
+        "puerta":     (200,160,80),
+        "casa":       (200,100,100),
     }
 
     clock = pygame.time.Clock()
+
     ejecutando = True
 
     while ejecutando:
 
         for evento in pygame.event.get():
+
             if evento.type == pygame.QUIT:
                 ejecutando = False
 
-        pantalla.fill((0, 0, 0))
+        # ======================
+        # ACTUALIZAR CULTIVOS
+        # ======================
 
-        # ==========================
-        # MOVER AGENTE CON A*
-        # ==========================
+        for crop in state.crops:
 
-        if path and len(path) > 1:
+            crop.crecer(
+                tasa_secado=0.1,
+                umbral_crecimiento=40
+            )
 
-            siguiente = path[1]
+        # ======================
+        # UPDATE AGENTE
+        # ======================
 
-            agente.x = siguiente[0]
-            agente.y = siguiente[1]
+        state.farmer_pos = (agente.x, agente.y)
 
-            path.pop(0)
+        agente.update(state)
 
-        # ==========================
-        # DIBUJAR MAPA
-        # ==========================
+        # ======================
+        # DIBUJAR
+        # ======================
 
+        pantalla.fill((0,0,0))
+
+        # mapa
         for fila in mundo:
             for nodo in fila:
 
-                color = colores.get(nodo.type_name, (255, 255, 255))
+                color = colores.get(nodo.type_name, (255,255,255))
 
                 pygame.draw.rect(
                     pantalla,
@@ -172,15 +166,24 @@ def main():
                     )
                 )
 
-        # ==========================
-        # DIBUJAR CROPS
-        # ==========================
+        # cultivos
+        for crop in state.crops:
 
-        for crop in crops:
+            if crop.fase == 0:
+                color = (160,120,40)   # tierra
+
+            elif crop.fase == 1:
+                color = (120,200,80)   # brote
+
+            elif crop.fase == 2:
+                color = (0,200,0)      # creciendo
+
+            elif crop.fase >= 3:
+                color = (255,220,0)    # listo para cosechar
 
             pygame.draw.rect(
                 pantalla,
-                (0, 200, 0),
+                color,
                 (
                     crop.x * celda_px,
                     crop.y * celda_px,
@@ -189,17 +192,14 @@ def main():
                 )
             )
 
-        # ==========================
-        # DIBUJAR PATH
-        # ==========================
+        # path del agente
+        if agente.current_path:
 
-        if path:
-
-            for px, py in path:
+            for px, py in agente.current_path:
 
                 pygame.draw.rect(
                     pantalla,
-                    (255, 0, 255),
+                    (255,0,255),
                     (
                         px * celda_px,
                         py * celda_px,
@@ -208,13 +208,10 @@ def main():
                     )
                 )
 
-        # ==========================
-        # DIBUJAR AGENTE
-        # ==========================
-
+        # agente
         pygame.draw.rect(
             pantalla,
-            (255, 255, 255),
+            (255,255,255),
             (
                 agente.x * celda_px,
                 agente.y * celda_px,
@@ -225,7 +222,7 @@ def main():
 
         pygame.display.flip()
 
-        clock.tick(5)
+        clock.tick(10)
 
     pygame.quit()
 
