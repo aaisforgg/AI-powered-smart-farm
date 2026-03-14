@@ -10,3 +10,5 @@ class GameState:
     animals: list = field(default_factory=list)
     season: str = 'spring'
     tick: int = 0
+    generation: int = 0
+    best_fitness: float = 0.0
