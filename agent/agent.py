@@ -9,12 +9,18 @@ from .decision import DecisionSystem
 from .movement import Movement
 from pathfinding.astar import AStarPathfinder
 from .genetics import Genes
+from .evolution import EvolutionEngine
 
 class Agent:
 
-    def __init__(self, x, y):
+    def __init__(self, x, y, crop_factory=None):
         self.x = x
         self.y = y
+        # Guardar spawn para reiniciar cada vida
+        self._spawn_x = x
+        self._spawn_y = y
+        # Función que genera cultivos nuevos al inicio de cada vida
+        self._crop_factory = crop_factory
 
         self.dir = (0, 0)
 
@@ -36,6 +42,17 @@ class Agent:
         self.energy_recovery = 4.0
         self.resting = False
 
+        # Motor evolutivo
+        self.evolution = EvolutionEngine()
+
+        # Estadísticas de la vida actual (se resetean cada generación)
+        self.life_stats = {
+            "harvests":       0,
+            "steps":          0,
+            "energy_on_rest": None,
+            "starved":        False
+        }
+
         self.memory = {
             "visited_tiles": set(),
             "known_walkable": set(),
@@ -46,18 +63,40 @@ class Agent:
             "last_actions": deque(maxlen=10)
         }
 
+    def reset_life_stats(self):
+        self.life_stats = {
+            "harvests":       0,
+            "steps":          0,
+            "energy_on_rest": None,
+            "starved":        False
+        }
+
     def update(self, state):
 
         tile = state.grid[self.y][self.x]
 
         # DESCANSO EN CASA
         if self.resting and tile.type_name == "casa":
+            # Registrar energía al llegar a casa (solo la primera vez)
+            if self.life_stats["energy_on_rest"] is None:
+                self.life_stats["energy_on_rest"] = self.energy
+
             self.energy += self.genes.rest_efficiency
             print(f"[Agent] Descansando... energia={self.energy:.1f}")
+
             if self.energy >= self.max_energy:
                 self.energy = self.max_energy
                 self.resting = False
                 print("[Agent] Energia completa. Volviendo al trabajo")
+
+                # ── FIN DE VIDA: evaluar y evolucionar ──
+                self.evolution.end_life(self)
+                print(f"[Agent] Generación {self.evolution.generation} | "
+                      f"Mejor fitness histórico: {self.evolution.best_fitness:.2f}")
+
+                # Reiniciar estado interno para la nueva vida
+                self._reset_for_new_life(state)
+
             return
 
         # MEMORIA ESPACIAL
@@ -118,11 +157,13 @@ class Agent:
         # MOVIMIENTO
         if self.current_path:
             self.movement.follow_path(self)
+            self.life_stats["steps"] += 1
 
             tile = state.grid[self.y][self.x]
             self.energy -= tile.cost * self.genes.energy_consumption
-            if self.energy < 0:
+            if self.energy <= 0:
                 self.energy = 0
+                self.life_stats["starved"] = True
 
             if not self.current_path and self.goal:
                 gx, gy = self.goal.pos
@@ -185,6 +226,7 @@ class Agent:
         elif self.strategy == "HARVEST":
             state.farmer_inventory.append(("crop", crop.pos))
             state.crops.remove(crop)
+            self.life_stats["harvests"] += 1
             print(f"[Agent] Cosechado {crop.pos} | inventario: {len(state.farmer_inventory)}")
             if crop.pos in self.memory["known_crops"]:
                 del self.memory["known_crops"][crop.pos]
@@ -260,6 +302,39 @@ class Agent:
             return None
 
         return random.choice(candidates)
+
+    def _reset_for_new_life(self, state):
+        """
+        Reinicia todo lo necesario para empezar una nueva vida limpia.
+        Se llama justo después de que end_life() muta los genes.
+        """
+        # Volver al spawn (posición inicial guardada)
+        self.x = self._spawn_x
+        self.y = self._spawn_y
+
+        # Limpiar navegación
+        self.goal = None
+        self.strategy = None
+        self.current_path = deque()
+        self.needs_replan = False
+        self.resting = False
+
+        # Limpiar memoria (nueva vida = nueva exploración)
+        self.memory = {
+            "visited_tiles":  set(),
+            "known_walkable": set(),
+            "known_blocked":  set(),
+            "known_crops":    {},
+            "home_tiles":     set(),
+            "episodes":       deque(maxlen=50),
+            "last_actions":   deque(maxlen=10)
+        }
+
+        # Regenerar cultivos y limpiar inventario
+        if self._crop_factory:
+            state.crops = self._crop_factory()
+        state.farmer_inventory = []
+        state.generation = self.evolution.generation
 
     def _reset_goal(self):
         self.goal = None
