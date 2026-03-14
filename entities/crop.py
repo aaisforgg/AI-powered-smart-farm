@@ -1,7 +1,8 @@
 
 class Crop:
     def __init__(self, x, y):
-        self.pos = (x, y)
+        self.x = x
+        self.y = y
         self.humedad = 100.0
         self.fase = 0
 

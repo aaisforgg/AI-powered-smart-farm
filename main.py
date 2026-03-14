@@ -1,6 +1,12 @@
 import pygame
+import random
+
 from world.farm_grid import MAP_DATA, TILE_TYPES
 from world.node import Node
+from core.state import GameState
+from agent.agent import Agent
+from entities.crop import Crop
+from pathfinding.astar import AStarPathfinder
 
 
 def cargar_mapa():
@@ -14,7 +20,36 @@ def cargar_mapa():
     return grid
 
 
+def posicion_random_valida(grid):
+    alto = len(grid)
+    ancho = len(grid[0])
+
+    while True:
+        x = random.randint(0, ancho - 1)
+        y = random.randint(0, alto - 1)
+
+        nodo = grid[y][x]
+
+        if nodo.type_name not in ["agua", "acantilado", "edificio"]:
+            return x, y
+
+
+def posicion_random_cultivo(grid):
+    alto = len(grid)
+    ancho = len(grid[0])
+
+    while True:
+        x = random.randint(0, ancho - 1)
+        y = random.randint(0, alto - 1)
+
+        nodo = grid[y][x]
+
+        if nodo.type_name == "cultivo":
+            return x, y
+
+
 def main():
+
     pygame.init()
 
     celda_px = 12
@@ -24,33 +59,44 @@ def main():
     pantalla = pygame.display.set_mode((ancho, alto))
     pygame.display.set_caption("AI Smart Farm")
 
-    # ==========================
-    # CARGAR MAPA
-    # ==========================
+    mundo = cargar_mapa()
 
-    mundo = cargar_mapa_logico()
+    pathfinder = AStarPathfinder()
 
     # ==========================
-    # SPAWN RANDOM DEL AGENTE
+    # SPAWN DEL AGENTE
     # ==========================
 
     spawn_x, spawn_y = posicion_random_valida(mundo)
-
-    print(f"Spawn del agente: ({spawn_x}, {spawn_y})")
-
     agente = Agent(spawn_x, spawn_y)
 
     # ==========================
-    # CULTIVOS
+    # CREAR CROPS
     # ==========================
 
-    crops = [
-        Crop(50, 40),
-        Crop(55, 42),
-        Crop(22, 45),
-        Crop(25, 50),
-        Crop(62, 58),
-    ]
+    crops = []
+
+    for _ in range(10):
+        x, y = posicion_random_cultivo(mundo)
+        crops.append(Crop(x, y))
+
+    # ==========================
+    # OBJETIVO PARA A*
+    # ==========================
+
+    objetivo = crops[0]
+
+    # ==========================
+    # CALCULAR PATH
+    # ==========================
+
+    path = pathfinder.find_path(
+        agente.x,
+        agente.y,
+        objetivo.x,
+        objetivo.y,
+        mundo
+    )
 
     # ==========================
     # GAME STATE
@@ -61,10 +107,6 @@ def main():
         grid=mundo,
         crops=crops
     )
-
-    # ==========================
-    # COLORES
-    # ==========================
 
     colores = {
         "pasto":      (118, 186, 27),
@@ -77,31 +119,104 @@ def main():
         "casa":       (200, 100, 100),
     }
 
-    mundo = cargar_mapa()
-
     clock = pygame.time.Clock()
     ejecutando = True
 
     while ejecutando:
+
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 ejecutando = False
 
         pantalla.fill((0, 0, 0))
 
-        # Dibujar mapa
+        # ==========================
+        # MOVER AGENTE CON A*
+        # ==========================
+
+        if path and len(path) > 1:
+
+            siguiente = path[1]
+
+            agente.x = siguiente[0]
+            agente.y = siguiente[1]
+
+            path.pop(0)
+
+        # ==========================
+        # DIBUJAR MAPA
+        # ==========================
+
         for fila in mundo:
             for nodo in fila:
+
                 color = colores.get(nodo.type_name, (255, 255, 255))
+
                 pygame.draw.rect(
                     pantalla,
                     color,
-                    (nodo.x * celda_px, nodo.y * celda_px,
-                     celda_px - 1, celda_px - 1)
+                    (
+                        nodo.x * celda_px,
+                        nodo.y * celda_px,
+                        celda_px - 1,
+                        celda_px - 1
+                    )
                 )
 
+        # ==========================
+        # DIBUJAR CROPS
+        # ==========================
+
+        for crop in crops:
+
+            pygame.draw.rect(
+                pantalla,
+                (0, 200, 0),
+                (
+                    crop.x * celda_px,
+                    crop.y * celda_px,
+                    celda_px - 1,
+                    celda_px - 1
+                )
+            )
+
+        # ==========================
+        # DIBUJAR PATH
+        # ==========================
+
+        if path:
+
+            for px, py in path:
+
+                pygame.draw.rect(
+                    pantalla,
+                    (255, 0, 255),
+                    (
+                        px * celda_px,
+                        py * celda_px,
+                        celda_px - 1,
+                        celda_px - 1
+                    )
+                )
+
+        # ==========================
+        # DIBUJAR AGENTE
+        # ==========================
+
+        pygame.draw.rect(
+            pantalla,
+            (255, 255, 255),
+            (
+                agente.x * celda_px,
+                agente.y * celda_px,
+                celda_px - 1,
+                celda_px - 1
+            )
+        )
+
         pygame.display.flip()
-        clock.tick(60)
+
+        clock.tick(5)
 
     pygame.quit()
 
