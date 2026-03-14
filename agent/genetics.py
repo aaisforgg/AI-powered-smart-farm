@@ -25,28 +25,32 @@ class Genes:
             else random.uniform(0.1, 0.6)
         )
 
-    def mutate(self):
-
-        mutation_strength = 0.1
-
-        self.energy_max *= random.uniform(
-            1 - mutation_strength,
-            1 + mutation_strength
+    def mutate(self, strength=0.1):
+        """
+        Muta todos los genes multiplicando por un factor aleatorio.
+        strength controla qué tan grandes pueden ser los cambios (0.0 - 1.0).
+        """
+        self.energy_max = max(
+            40.0,
+            self.energy_max * random.uniform(1 - strength, 1 + strength)
         )
 
-        self.energy_consumption *= random.uniform(
-            1 - mutation_strength,
-            1 + mutation_strength
+        self.energy_consumption = max(
+            0.1,
+            self.energy_consumption * random.uniform(1 - strength, 1 + strength)
         )
 
-        self.rest_efficiency *= random.uniform(
-            1 - mutation_strength,
-            1 + mutation_strength
+        self.rest_efficiency = max(
+            0.5,
+            self.rest_efficiency * random.uniform(1 - strength, 1 + strength)
         )
 
-        self.exploration_rate *= random.uniform(
-            1 - mutation_strength,
-            1 + mutation_strength
+        self.exploration_rate = min(
+            1.0,
+            max(
+                0.01,
+                self.exploration_rate * random.uniform(1 - strength, 1 + strength)
+            )
         )
 
     def crossover(self, other):

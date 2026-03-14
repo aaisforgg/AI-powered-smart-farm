@@ -45,6 +45,18 @@ def posicion_random_valida(grid):
             return x, y
 
 
+def _spawn_crops():
+    """Crea la lista inicial de cultivos. Se llama al inicio y en cada nueva vida."""
+    from entities.crop import Crop
+    return [
+        Crop(50, 40),
+        Crop(55, 42),
+        Crop(22, 45),
+        Crop(25, 50),
+        Crop(62, 58),
+    ]
+
+
 def main():
 
     pygame.init()
@@ -70,19 +82,13 @@ def main():
 
     print(f"Spawn del agente: ({spawn_x}, {spawn_y})")
 
-    agente = Agent(spawn_x, spawn_y)
+    agente = Agent(spawn_x, spawn_y, crop_factory=_spawn_crops)
 
     # ==========================
     # CULTIVOS
     # ==========================
 
-    crops = [
-        Crop(50, 40),
-        Crop(55, 42),
-        Crop(22, 45),
-        Crop(25, 50),
-        Crop(62, 58),
-    ]
+    crops = _spawn_crops()
 
     # ==========================
     # GAME STATE

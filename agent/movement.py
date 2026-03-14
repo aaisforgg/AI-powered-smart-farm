@@ -25,8 +25,9 @@ class Movement:
         # quitar duplicados
         directions = list(dict.fromkeys(directions))
 
-        # pequeña aleatoriedad
-        if random.random() < 0.3:
+        # aleatoriedad controlada por el gen exploration_rate
+        exploration_rate = getattr(agent.genes, 'exploration_rate', 0.3)
+        if random.random() < exploration_rate:
             random.shuffle(directions)
 
 # ---------- Buscar tiles no visitados ----------
