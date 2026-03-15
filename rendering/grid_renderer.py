@@ -6,7 +6,7 @@ from rendering.theme import (
 )
 
 
-def dibujar_grid(pantalla, state, agente, celda_px, particulas, assets=None):
+def dibujar_grid(pantalla, state, agente, celda_px, particulas, assets=None, debug_visual=False):
     pantalla.set_clip((0, 0, GRID_W, GRID_H))
 
     season = getattr(state, "season", "")
@@ -42,6 +42,14 @@ def dibujar_grid(pantalla, state, agente, celda_px, particulas, assets=None):
         tint.fill(EVENT_TINTS[event_name])
         pantalla.blit(tint, (0, 0))
 
+    # — Tiles visitados (debug) —
+    if debug_visual and agente.memory.get("visited_tiles"):
+        dbg_surf = pygame.Surface((GRID_W, GRID_H), pygame.SRCALPHA)
+        for vx, vy in agente.memory["visited_tiles"]:
+            pygame.draw.rect(dbg_surf, (255, 255, 100, 30),
+                             (vx * celda_px, vy * celda_px, celda_px, celda_px))
+        pantalla.blit(dbg_surf, (0, 0))
+
     # — Crops —
     for crop in state.crops:
         cx, cy = crop.pos
@@ -52,6 +60,28 @@ def dibujar_grid(pantalla, state, agente, celda_px, particulas, assets=None):
             color = CROP_COLORS.get(crop.fase, (255, 255, 255))
             pygame.draw.rect(pantalla, color,
                 (cx * celda_px + 2, cy * celda_px + 2, celda_px - 4, celda_px - 4))
+
+    # — Path del agente —
+    if agente.current_path:
+        path_surf = pygame.Surface((GRID_W, GRID_H), pygame.SRCALPHA)
+        prev = (agente.x, agente.y)
+        for px, py in agente.current_path:
+            cx_px = px * celda_px + celda_px // 2
+            cy_px = py * celda_px + celda_px // 2
+            manhattan = abs(px - prev[0]) + abs(py - prev[1])
+            if manhattan == 1:
+                pygame.draw.circle(path_surf, (80, 160, 255, 90), (cx_px, cy_px), 2)
+            elif manhattan > 1:
+                pygame.draw.circle(path_surf, (255, 0, 0, 200), (cx_px, cy_px), 4)
+            prev = (px, py)
+        pantalla.blit(path_surf, (0, 0))
+
+    # — Marcador del goal —
+    if agente.goal and hasattr(agente.goal, 'pos'):
+        gx_px, gy_px = agente.goal.pos
+        goal_surf = pygame.Surface((celda_px + 4, celda_px + 4), pygame.SRCALPHA)
+        pygame.draw.rect(goal_surf, (255, 255, 0, 120), (0, 0, celda_px + 4, celda_px + 4), 2)
+        pantalla.blit(goal_surf, (gx_px * celda_px - 2, gy_px * celda_px - 2))
 
     # — Agente —
     ax = agente.x * celda_px + celda_px // 2
