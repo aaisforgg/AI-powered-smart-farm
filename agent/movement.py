@@ -5,13 +5,19 @@ class Movement:
     CARDINAL = [(1,0),(-1,0),(0,1),(0,-1)]
 
     def follow_path(self, agent):
-        if agent.current_path:
-            nx, ny = agent.current_path.popleft()
-            if abs(nx - agent.x) + abs(ny - agent.y) != 1:
-                agent.current_path.clear()
-                return
+        if not agent.current_path:
+            return
+
+        nx, ny = agent.current_path.popleft()
+        manhattan = abs(nx - agent.x) + abs(ny - agent.y)
+
+        if manhattan == 1:
             agent.x = nx
             agent.y = ny
+        elif manhattan == 0:
+            pass  # nodo duplicado — skip silencioso
+        else:
+            print(f"[WARN] follow_path salto invalido: ({agent.x},{agent.y}) -> ({nx},{ny}) manhattan={manhattan}")
 
     def explore(self, agent, grid):
         rows = len(grid)

@@ -21,7 +21,7 @@ class Crop:
         if self.humedad > 0:
             self.humedad -= tasa_secado * dry_multiplier
 
-        if self.fase < 2:
+        if self.humedad > umbral_crecimiento and self.fase < 2:
             self.ticks_en_fase += 1
             ticks_necesarios = self.TICKS_PER_PHASE.get(self.fase, 999)
             if self.ticks_en_fase >= ticks_necesarios:

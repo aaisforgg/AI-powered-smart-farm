@@ -372,6 +372,11 @@ class Agent:
                 # adyacente al prev ajustado. Devolver path original intacto.
                 return path
 
+        # Validación final: confirmar que todos los pasos son cardinales
+        for i in range(1, len(new_path)):
+            if abs(new_path[i][0] - new_path[i-1][0]) + abs(new_path[i][1] - new_path[i-1][1]) != 1:
+                return path
+
         return new_path
 
     def _find_unvisited_target(self, grid):
