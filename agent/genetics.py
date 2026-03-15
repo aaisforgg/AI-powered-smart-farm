@@ -13,7 +13,7 @@ class Genes:
 
         self.energy_consumption = (
             energy_consumption if energy_consumption
-            else random.uniform(0.8, 1.5)
+            else random.uniform(0.3, 0.6)
         )
 
         self.rest_efficiency = (
