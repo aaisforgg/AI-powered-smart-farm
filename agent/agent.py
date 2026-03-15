@@ -280,12 +280,6 @@ class Agent:
         self.movement.follow_path(self)
         self.life_stats["steps"] += 1
 
-        if self.visual_action_ticks == 0:
-            if self.current_path and len(self.current_path) > 15:
-                self.visual_action = "running"
-            elif self.current_path:
-                self.visual_action = "walking"
-
         tile = state.grid[self.y][self.x]
 
         move_cost = tile.cost * self.genes.energy_consumption
@@ -328,8 +322,6 @@ class Agent:
                 return
 
         self.movement.explore(self, state.grid)
-        if self.visual_action_ticks == 0:
-            self.visual_action = "walking"
 
     # ── ESTRATEGIA ──────────────────────────────────────────────────────────
 
