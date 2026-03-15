@@ -112,6 +112,27 @@ class Agent:
         for crop in state.crops:
             self.memory["known_crops"][crop.pos] = crop
 
+        # SI NO HAY CULTIVOS → IR A CASA ANTES DE EXPLORAR
+        if not self.memory["known_crops"] and state.farmer_inventory and not self.current_path:
+
+            if self.memory["home_tiles"]:
+
+                hx, hy = next(iter(self.memory["home_tiles"]))
+
+                print("[Agent] No hay cultivos → regresando a casa a descargar")
+
+                self.goal = None
+                self.strategy = None
+                self.current_path.clear()
+
+                path = self.pathfinder.find_path(self.x, self.y, hx, hy, state.grid)
+
+                if path:
+                    self.current_path = deque(path[1:])
+                    self.resting = True
+
+                return
+
         # ENERGIA BAJA → VOLVER A CASA
         if self.energy <= self.energy_threshold and not self.resting:
             if self.memory["home_tiles"]:
@@ -139,7 +160,6 @@ class Agent:
                 gx, gy = self.goal.pos
                 path = self.pathfinder.find_path(self.x, self.y, gx, gy, state.grid)
                 if path:
-                    path = self._centralize_path(path, state.grid)
                     self.current_path = deque(path[1:])
                     print(f"[Agent] Ruta calculada a {self.goal.pos} — {len(self.current_path)} pasos")
                 else:
@@ -184,7 +204,6 @@ class Agent:
             path = self.pathfinder.find_path(self.x, self.y, tx, ty, state.grid)
 
             if path:
-                path = self._centralize_path(path, state.grid)
                 self.current_path = deque(path[1:])
                 return
 
@@ -230,57 +249,6 @@ class Agent:
             print(f"[Agent] Cosechado {crop.pos} | inventario: {len(state.farmer_inventory)}")
             if crop.pos in self.memory["known_crops"]:
                 del self.memory["known_crops"][crop.pos]
-
-    def _centralize_path(self, path, grid):
-
-        if not path:
-            return path
-
-        rows = len(grid)
-        cols = len(grid[0])
-
-        new_path = []
-
-        for x, y in path:
-
-            best = (x, y)
-            best_score = -999
-
-            # revisar vecinos posibles (incluyendo quedarse en el mismo)
-            for dx, dy in [(0,0),(1,0),(-1,0),(0,1),(0,-1)]:
-
-                nx = x + dx
-                ny = y + dy
-
-                if not (0 <= nx < cols and 0 <= ny < rows):
-                    continue
-
-                if not grid[ny][nx].walkable:
-                    continue
-
-                # calcular distancia a obstáculos cercanos
-                score = 0
-
-                for ax, ay in [
-                    (-1,0),(1,0),(0,-1),(0,1),
-                    (-1,-1),(1,-1),(-1,1),(1,1)
-                ]:
-                    ox = nx + ax
-                    oy = ny + ay
-
-                    if 0 <= ox < cols and 0 <= oy < rows:
-                        if not grid[oy][ox].walkable:
-                            score -= 2
-                        else:
-                            score += 1
-
-                if score > best_score:
-                    best_score = score
-                    best = (nx, ny)
-
-            new_path.append(best)
-
-        return new_path
 
     def _find_unvisited_target(self, grid):
 
