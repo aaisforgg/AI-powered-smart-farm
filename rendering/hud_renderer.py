@@ -315,6 +315,3 @@ def dibujar_hud(pantalla, state, agente, fuentes):
         color = C["txt_mid"] if i == 0 else C["txt_dim"]
         _label(pantalla, fuentes, txt, lx + pad, ly + 26 + i * 13, color, "xs")
 
-    # ── Footer — controles ────────────────────────────────────────────────
-    controls = "P:Pausa  D:Debug  +/-:Vel  R:Reset"
-    _label(pantalla, fuentes, controls, px + 4, WINDOW_H - 15, C["txt_dim"], "xs")
