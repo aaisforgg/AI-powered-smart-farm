@@ -7,7 +7,9 @@ class Genes:
                  energy_consumption=None,
                  rest_efficiency=None,
                  exploration_rate=None,
-                 vision_radius=None):
+                 vision_radius=None,
+                 water_efficiency=None,
+                 risk_tolerance=None):
 
         self.energy_max = energy_max if energy_max else random.uniform(150, 250)
 
@@ -29,6 +31,16 @@ class Genes:
         self.vision_radius = (
             vision_radius if vision_radius
             else random.randint(6, 14)
+        )
+
+        self.water_efficiency = (
+            water_efficiency if water_efficiency
+            else random.uniform(30.0, 70.0)
+        )
+
+        self.risk_tolerance = (
+            risk_tolerance if risk_tolerance
+            else random.uniform(0.15, 0.40)
         )
 
     def mutate(self, strength=0.1):
@@ -64,6 +76,16 @@ class Genes:
             min(20, int(self.vision_radius * random.uniform(1 - strength, 1 + strength)))
         )
 
+        self.water_efficiency = max(
+            15.0,
+            min(100.0, self.water_efficiency * random.uniform(1 - strength, 1 + strength))
+        )
+
+        self.risk_tolerance = max(
+            0.05,
+            min(0.60, self.risk_tolerance * random.uniform(1 - strength, 1 + strength))
+        )
+
     def crossover(self, other):
 
         child = Genes(
@@ -78,6 +100,8 @@ class Genes:
                 [self.exploration_rate, other.exploration_rate]
             ),
             vision_radius=random.choice([self.vision_radius, other.vision_radius]),
+            water_efficiency=random.choice([self.water_efficiency, other.water_efficiency]),
+            risk_tolerance=random.choice([self.risk_tolerance, other.risk_tolerance]),
         )
 
         child.mutate()
