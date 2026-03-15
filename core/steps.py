@@ -43,6 +43,12 @@ def tick_crops(state):
         state.crops.remove(c)
         print(f"[Crop] Cultivo en {c.pos} murió por sequía")
 
+def tick_animals(state):
+    """Actualiza hambre y producción de animales."""
+    for animal in state.animals:
+        animal.actualizar()
+
+
 def tick_season(state):
     """Avanza estaciones. Si hay EventManager, le pasa la estación actual."""
     season_mgr = state._season_mgr

@@ -316,51 +316,74 @@ class Agent:
     # ── ESTRATEGIA ──────────────────────────────────────────────────────────
 
     def _execute_strategy(self, state):
-        """Ejecuta la acción planeada sobre el crop objetivo."""
+        """Ejecuta la acción planeada sobre el goal (crop o animal)."""
         if not self.goal or not self.strategy:
             return
 
-        crop = self.goal
+        goal = self.goal
+        is_animal = self.strategy in ("FEED", "COLLECT")
 
-        # Fix E: guard para crops destruidos por eventos (antes de HARVEST)
-        if crop not in state.crops and self.strategy != "HARVEST":
-            if crop.pos in self.memory["known_crops"]:
-                del self.memory["known_crops"][crop.pos]
-            return
+        # Guard: verificar que el objetivo sigue existiendo
+        if is_animal:
+            if goal not in state.animals:
+                return
+        elif self.strategy != "HARVEST":
+            if goal not in state.crops:
+                if goal.pos in self.memory["known_crops"]:
+                    del self.memory["known_crops"][goal.pos]
+                return
 
         self.memory["episodes"].append({
             "pos": (self.x, self.y),
             "action": self.strategy,
-            "target": crop.pos
+            "target": goal.pos
         })
-        self.memory["last_actions"].append((self.strategy, crop.pos))
+        self.memory["last_actions"].append((self.strategy, goal.pos))
 
-        print(f"[Agent] Ejecutando '{self.strategy}' en {crop.pos} | "
-              f"humedad={crop.humedad:.1f} fase={crop.fase}")
+        if is_animal:
+            print(f"[Agent] Ejecutando '{self.strategy}' en {goal.pos} ({goal.especie})")
+        else:
+            print(f"[Agent] Ejecutando '{self.strategy}' en {goal.pos} | "
+                  f"humedad={goal.humedad:.1f} fase={goal.fase}")
         if self.debug:
-            d = abs(self.x - crop.x) + abs(self.y - crop.y)
-            print(f"[EXECUTE] strategy={self.strategy} en pos={crop.pos} dist={d}")
+            d = abs(self.x - goal.x) + abs(self.y - goal.y)
+            print(f"[EXECUTE] strategy={self.strategy} en pos={goal.pos} dist={d}")
 
         if self.strategy == "WATER":
-            crop.humedad = min(100.0, crop.humedad + self.genes.water_efficiency)
+            goal.humedad = min(100.0, goal.humedad + self.genes.water_efficiency)
 
         elif self.strategy == "PLANT":
-            crop.fase = 1
+            goal.fase = 1
 
         elif self.strategy == "HARVEST":
-            if crop not in state.crops:
-                if crop.pos in self.memory["known_crops"]:
-                    del self.memory["known_crops"][crop.pos]
+            if goal not in state.crops:
+                if goal.pos in self.memory["known_crops"]:
+                    del self.memory["known_crops"][goal.pos]
                 return
             harvest_bonus = state.active_effects.get("harvest_bonus", 1)
-            valor = crop.valor * harvest_bonus
-            state.farmer_inventory.append(("crop", crop.pos, crop.tipo, valor))
-            state.crops.remove(crop)
+            valor = goal.valor * harvest_bonus
+            state.farmer_inventory.append(("crop", goal.pos, goal.tipo, valor))
+            state.crops.remove(goal)
             self.life_stats["harvests"] += 1
             self.life_stats["harvest_value"] = self.life_stats.get("harvest_value", 0) + valor
-            print(f"[Agent] Cosechado {crop.tipo} en {crop.pos} (valor={valor})")
-            if crop.pos in self.memory["known_crops"]:
-                del self.memory["known_crops"][crop.pos]
+            state.score += valor
+            print(f"[Agent] Cosechado {goal.tipo} en {goal.pos} (valor={valor})")
+            if goal.pos in self.memory["known_crops"]:
+                del self.memory["known_crops"][goal.pos]
+
+        elif self.strategy == "FEED":
+            goal.alimentar()
+            print(f"[Agent] Alimentado {goal.especie} en {goal.pos}")
+
+        elif self.strategy == "COLLECT":
+            producto = goal.recoger_producto()
+            if producto:
+                nombre, valor = producto
+                state.farmer_inventory.append(("animal_product", goal.pos, nombre, valor))
+                self.life_stats["harvests"] += 1
+                self.life_stats["harvest_value"] = self.life_stats.get("harvest_value", 0) + valor
+                state.score += valor
+                print(f"[Agent] Recogido {nombre} de {goal.especie} (valor={valor})")
 
     # ── PATH HELPERS ────────────────────────────────────────────────────────
 

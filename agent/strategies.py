@@ -27,3 +27,13 @@ class StrategyManager:
 
         # Fase 1: siempre regar (humedad se capea a 100, mejor que estar idle)
         return "WATER"
+
+    def choose_animal_strategy(self, state, animal):
+        """Retorna 'FEED' | 'COLLECT' | None."""
+        if animal is None or not hasattr(animal, "hambre"):
+            return None
+        if animal.producto_listo:
+            return "COLLECT"
+        if animal.hambre >= 50:
+            return "FEED"
+        return None
