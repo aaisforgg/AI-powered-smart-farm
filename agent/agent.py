@@ -38,7 +38,7 @@ class Agent:
 
         self.energy = self.genes.energy_max
         self.max_energy = self.genes.energy_max
-        self.energy_threshold = 10.0
+        self.energy_threshold = self.genes.energy_max * 0.25
         self.energy_recovery = 4.0
         self.resting = False
 
@@ -157,7 +157,10 @@ class Agent:
             self.memory["home_tiles"].add((self.x, self.y))
 
         for crop in state.crops:
-            self.memory["known_crops"][crop.pos] = crop
+            dx = abs(crop.x - self.x)
+            dy = abs(crop.y - self.y)
+            if dx + dy <= self.genes.vision_radius:
+                self.memory["known_crops"][crop.pos] = crop
 
     def _sync_known_crops(self, state):
         """Elimina de known_crops los crops destruidos por eventos (Fix B)."""

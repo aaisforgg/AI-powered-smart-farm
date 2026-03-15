@@ -6,13 +6,14 @@ class Genes:
                  energy_max=None,
                  energy_consumption=None,
                  rest_efficiency=None,
-                 exploration_rate=None):
+                 exploration_rate=None,
+                 vision_radius=None):
 
-        self.energy_max = energy_max if energy_max else random.uniform(200, 300)
+        self.energy_max = energy_max if energy_max else random.uniform(80, 150)
 
         self.energy_consumption = (
             energy_consumption if energy_consumption
-            else random.uniform(0.3, 0.8)
+            else random.uniform(0.8, 1.5)
         )
 
         self.rest_efficiency = (
@@ -23,6 +24,11 @@ class Genes:
         self.exploration_rate = (
             exploration_rate if exploration_rate
             else random.uniform(0.1, 0.6)
+        )
+
+        self.vision_radius = (
+            vision_radius if vision_radius
+            else random.randint(6, 14)
         )
 
     def mutate(self, strength=0.1):
@@ -53,6 +59,11 @@ class Genes:
             )
         )
 
+        self.vision_radius = max(
+            4,
+            min(20, int(self.vision_radius * random.uniform(1 - strength, 1 + strength)))
+        )
+
     def crossover(self, other):
 
         child = Genes(
@@ -65,7 +76,8 @@ class Genes:
             ),
             exploration_rate=random.choice(
                 [self.exploration_rate, other.exploration_rate]
-            )
+            ),
+            vision_radius=random.choice([self.vision_radius, other.vision_radius]),
         )
 
         child.mutate()

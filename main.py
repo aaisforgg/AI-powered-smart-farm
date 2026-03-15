@@ -44,13 +44,6 @@ def posicion_random_valida(grid):
 
 
 def spawn_crops(grid, count=None):
-    """Genera cultivos en posiciones aleatorias de tiles tipo 'cultivo'.
-
-    Distribución de fases:
-      30% fase 0 (semilla)   humedad 80-100
-      40% fase 1 (creciendo) humedad 40-80
-      30% fase 2 (listo)     humedad 20-60
-    """
     if count is None:
         count = random.randint(8, 12)
 
@@ -62,7 +55,6 @@ def spawn_crops(grid, count=None):
     ]
 
     if not cultivo_tiles:
-        print("[WARN] spawn_crops: no hay tiles de tipo 'cultivo' en el mapa")
         return []
 
     count = min(count, len(cultivo_tiles))
@@ -71,16 +63,8 @@ def spawn_crops(grid, count=None):
     crops = []
     for x, y in positions:
         c = Crop(x, y)
-        r = random.random()
-        if r < 0.30:
-            c.fase    = 0
-            c.humedad = random.uniform(80, 100)
-        elif r < 0.70:
-            c.fase    = 1
-            c.humedad = random.uniform(40, 80)
-        else:
-            c.fase    = 2
-            c.humedad = random.uniform(20, 60)
+        c.fase = 0
+        c.humedad = 100.0
         crops.append(c)
 
     return crops
@@ -148,11 +132,6 @@ def main():
             if evento.type == pygame.QUIT:
                 ejecutando = False
         pipeline.run(state)
-
-        if len(state.crops) < 3:
-            nuevos = spawn_crops(state.grid, count=5)
-            state.crops.extend(nuevos)
-            print(f"[Main] Repoblando cultivos: +{len(nuevos)} → total {len(state.crops)}")
 
         render_frame(pantalla, state, agente, CELDA_PX, particulas, fuentes, assets)
         clock.tick(10)

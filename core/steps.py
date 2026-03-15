@@ -28,6 +28,12 @@ def tick_crops(state):
             umbral_crecimiento=20.0,
             dry_multiplier=dry_multiplier)
 
+    # Eliminar crops muertos
+    muertos = [c for c in state.crops if c.muerto]
+    for c in muertos:
+        state.crops.remove(c)
+        print(f"[Crop] Cultivo en {c.pos} murió por sequía")
+
 def tick_season(state):
     """Avanza estaciones. Si hay EventManager, le pasa la estación actual."""
     season_mgr = state._season_mgr
