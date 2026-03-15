@@ -123,19 +123,50 @@ def main():
         "xs": pygame.font.SysFont("Segoe UI", 11, bold=False),
     }
 
-    particulas = [Particle(GRID_W, GRID_H) for _ in range(120)]
-    clock      = pygame.time.Clock()
-    ejecutando = True
+    particulas    = [Particle(GRID_W, GRID_H) for _ in range(120)]
+    clock         = pygame.time.Clock()
+    ejecutando    = True
+    paused        = False
+    game_speed    = 10
+    debug_visual  = False
 
     while ejecutando:
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 ejecutando = False
-        pipeline.run(state)
+            elif evento.type == pygame.KEYDOWN:
+                if evento.key == pygame.K_p:
+                    paused = not paused
+                    print(f"[Main] {'Pausado' if paused else 'Reanudado'}")
+                elif evento.key == pygame.K_d:
+                    debug_visual = not debug_visual
+                    print(f"[Main] Debug visual: {'ON' if debug_visual else 'OFF'}")
+                elif evento.key in (pygame.K_PLUS, pygame.K_EQUALS, pygame.K_KP_PLUS):
+                    game_speed = min(60, game_speed + 5)
+                    print(f"[Main] Velocidad: {game_speed} t/s")
+                elif evento.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
+                    game_speed = max(1, game_speed - 5)
+                    print(f"[Main] Velocidad: {game_speed} t/s")
+                elif evento.key == pygame.K_r:
+                    agente = Agent(spawn_x, spawn_y, crop_factory=spawn_crops)
+                    agente.debug = DEBUG_MODE
+                    crops = spawn_crops(mundo)
+                    for fila in mundo:
+                        for nodo in fila:
+                            if nodo.type_name == "casa":
+                                agente.memory["home_tiles"].add((nodo.x, nodo.y))
+                    state.crops = crops
+                    state._agent_ref = agente
+                    state.tick = 0
+                    state.generation = 0
+                    state.active_effects.clear()
+                    print("[Main] Reset completo")
 
-        render_frame(pantalla, state, agente, CELDA_PX, particulas, fuentes, assets)
-        recovering = agente.resting and state.grid[agente.y][agente.x].type_name == "casa"
-        clock.tick(6 if recovering else 15)
+        if not paused:
+            pipeline.run(state)
+
+        render_frame(pantalla, state, agente, CELDA_PX, particulas, fuentes, assets, debug_visual)
+        clock.tick(game_speed)
 
     pygame.quit()
 
