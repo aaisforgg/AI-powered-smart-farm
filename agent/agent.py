@@ -340,6 +340,15 @@ class Agent:
         })
         self.memory["last_actions"].append((self.strategy, goal.pos))
 
+        # Actualizar dirección visual hacia el objetivo
+        if hasattr(goal, 'x') and hasattr(goal, 'y'):
+            dx = goal.x - self.x
+            dy = goal.y - self.y
+            if abs(dx) >= abs(dy):
+                self.dir = (1 if dx > 0 else -1, 0)
+            elif dy != 0:
+                self.dir = (0, 1 if dy > 0 else -1)
+
         if is_animal:
             print(f"[Agent] Ejecutando '{self.strategy}' en {goal.pos} ({goal.especie})")
         else:
