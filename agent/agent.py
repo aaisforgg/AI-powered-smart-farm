@@ -112,6 +112,27 @@ class Agent:
         for crop in state.crops:
             self.memory["known_crops"][crop.pos] = crop
 
+        # SI NO HAY CULTIVOS → IR A CASA ANTES DE EXPLORAR
+        if not self.memory["known_crops"] and state.farmer_inventory and not self.current_path:
+
+            if self.memory["home_tiles"]:
+
+                hx, hy = next(iter(self.memory["home_tiles"]))
+
+                print("[Agent] No hay cultivos → regresando a casa a descargar")
+
+                self.goal = None
+                self.strategy = None
+                self.current_path.clear()
+
+                path = self.pathfinder.find_path(self.x, self.y, hx, hy, state.grid)
+
+                if path:
+                    self.current_path = deque(path[1:])
+                    self.resting = True
+
+                return
+
         # ENERGIA BAJA → VOLVER A CASA
         if self.energy <= self.energy_threshold and not self.resting:
             if self.memory["home_tiles"]:
@@ -139,7 +160,6 @@ class Agent:
                 gx, gy = self.goal.pos
                 path = self.pathfinder.find_path(self.x, self.y, gx, gy, state.grid)
                 if path:
-                    path = self._centralize_path(path, state.grid)
                     self.current_path = deque(path[1:])
                     print(f"[Agent] Ruta calculada a {self.goal.pos} — {len(self.current_path)} pasos")
                 else:
@@ -184,7 +204,6 @@ class Agent:
             path = self.pathfinder.find_path(self.x, self.y, tx, ty, state.grid)
 
             if path:
-                path = self._centralize_path(path, state.grid)
                 self.current_path = deque(path[1:])
                 return
 

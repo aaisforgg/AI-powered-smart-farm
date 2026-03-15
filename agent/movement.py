@@ -1,17 +1,78 @@
 import random
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .agent import Agent
 
 class Movement:
 
-    CARDINAL = [(1,0),(-1,0),(0,1),(0,-1)]
-    
-    def follow_path(self, agent):
+    def follow_path(self, agent: "Agent"):
+        """
+        Hace que el agente avance un paso en su ruta actual (current_path).
 
-        if agent.current_path:
+        current_path es un deque con posiciones (x,y) que el agente debe seguir.
+        Cada tick se consume el siguiente nodo del path.
+        """
 
-            nx, ny = agent.current_path.popleft()
+        # Si no hay ruta, no hay nada que hacer
+        if not agent.current_path:
+            return
 
-            agent.x = nx
-            agent.y = ny
+        # Miramos el siguiente nodo de la ruta
+        # [0] solo lo observa, no lo elimina todavía
+        nx, ny = agent.current_path[0]
+
+        # Calculamos la dirección del movimiento
+        # Esto se usa para saber hacia dónde se mueve el agente
+        dx = nx - agent.x
+        dy = ny - agent.y
+
+        # Movemos al agente a la nueva posición
+        agent.x = nx
+        agent.y = ny
+
+        # Guardamos la dirección para otros sistemas
+        # (animación, exploración, decisiones, etc.)
+        agent.dir = (dx, dy)
+
+        # Ahora sí eliminamos el nodo del path
+        # porque ya lo hemos alcanzado
+        agent.current_path.popleft()
+
+        # ---------------------------------------------------------
+        # PATH SMOOTHING (suavizado del path)
+        # ---------------------------------------------------------
+        # Esta parte elimina pasos innecesarios si el agente
+        # sigue moviéndose en la misma dirección.
+        #
+        # Ejemplo de path original:
+        #
+        # (5,5) -> (6,5) -> (7,5) -> (8,5)
+        #
+        # En lugar de caminar paso por paso,
+        # eliminamos los nodos redundantes.
+        # ---------------------------------------------------------
+
+        while agent.current_path:
+
+            # Miramos el siguiente nodo
+            nnx, nny = agent.current_path[0]
+
+            # Dirección hacia ese nodo
+            ndx = nnx - agent.x
+            ndy = nny - agent.y
+
+            # Si la dirección es la misma que la anterior
+            # significa que seguimos en línea recta
+            if (ndx, ndy) == (dx, dy):
+
+                # Eliminamos ese nodo porque es redundante
+                agent.current_path.popleft()
+
+            else:
+                # Si cambia la dirección, paramos
+                # porque aquí empieza un giro del path
+                break
 
     def explore(self, agent, grid):
         rows = len(grid)
