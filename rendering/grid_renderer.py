@@ -61,18 +61,25 @@ def dibujar_grid(pantalla, state, agente, celda_px, particulas, assets=None, deb
             pygame.draw.rect(pantalla, color,
                 (cx * celda_px + 2, cy * celda_px + 2, celda_px - 4, celda_px - 4))
 
-    # — Path del agente —
+    # — Path del agente — gradiente cian (cerca) → amarillo (lejos) —
     if agente.current_path:
+        path_list = list(agente.current_path)
+        n         = max(len(path_list) - 1, 1)
         path_surf = pygame.Surface((GRID_W, GRID_H), pygame.SRCALPHA)
         prev = (agente.x, agente.y)
-        for px, py in agente.current_path:
+        for j, (px, py) in enumerate(path_list):
+            t     = j / n                          # 0 = junto al agente, 1 = goal
+            r_c   = int(60  + t * 195)             # 60  → 255
+            g_c   = int(210 - t * 10)              # 210 → 200
+            b_c   = int(255 - t * 215)             # 255 → 40
+            a_c   = int(200 - t * 90)              # 200 → 110
             cx_px = px * celda_px + celda_px // 2
             cy_px = py * celda_px + celda_px // 2
             manhattan = abs(px - prev[0]) + abs(py - prev[1])
             if manhattan == 1:
-                pygame.draw.circle(path_surf, (80, 160, 255, 90), (cx_px, cy_px), 2)
+                pygame.draw.circle(path_surf, (r_c, g_c, b_c, a_c), (cx_px, cy_px), 3)
             elif manhattan > 1:
-                pygame.draw.circle(path_surf, (255, 0, 0, 200), (cx_px, cy_px), 4)
+                pygame.draw.circle(path_surf, (255, 40, 40, 220), (cx_px, cy_px), 4)
             prev = (px, py)
         pantalla.blit(path_surf, (0, 0))
 
