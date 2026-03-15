@@ -101,4 +101,4 @@ class EvolutionEngine:
         # Aplicar los nuevos genes al agente
         agent.max_energy       = agent.genes.energy_max
         agent.energy           = agent.genes.energy_max
-        agent.energy_threshold = agent.genes.energy_max * 0.10
+        agent.energy_threshold = agent.genes.energy_max * 0.06
