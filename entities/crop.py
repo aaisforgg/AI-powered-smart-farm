@@ -19,9 +19,9 @@ class Crop:
 
     def crecer(self, tasa_secado, umbral_crecimiento=20, dry_multiplier=1.0):
         if self.humedad > 0:
-            self.humedad -= tasa_secado * dry_multiplier
+            self.humedad = max(0.0, self.humedad - tasa_secado * dry_multiplier)
 
-        if self.fase < 2:
+        if self.humedad > umbral_crecimiento and self.fase < 2:
             self.ticks_en_fase += 1
             ticks_necesarios = self.TICKS_PER_PHASE.get(self.fase, 999)
             if self.ticks_en_fase >= ticks_necesarios:

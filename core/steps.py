@@ -24,11 +24,9 @@ def tick_crops(state):
 
     for crop in state.crops:
         crop.crecer(
-            tasa_secado=1.0,
+            tasa_secado=0.15,
             umbral_crecimiento=20.0,
-            dry_multiplier=dry_multiplier
-        )
-
+            dry_multiplier=dry_multiplier)
 
 def tick_season(state):
     """Avanza estaciones. Si hay EventManager, le pasa la estación actual."""

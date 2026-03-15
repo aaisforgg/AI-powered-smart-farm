@@ -8,11 +8,11 @@ class Genes:
                  rest_efficiency=None,
                  exploration_rate=None):
 
-        self.energy_max = energy_max if energy_max else random.uniform(80, 150)
+        self.energy_max = energy_max if energy_max else random.uniform(200, 300)
 
         self.energy_consumption = (
             energy_consumption if energy_consumption
-            else random.uniform(0.8, 1.5)
+            else random.uniform(0.3, 0.8)
         )
 
         self.rest_efficiency = (
