@@ -91,10 +91,10 @@ class AssetManager:
 
     def _load_maps(self):
         map_files = {
-            "Verano":   "assets/map_verano.jpeg",
-            "Otoño":    "assets/map_otoño.jpeg",
-            "Invierno": "assets/map_invierno.jpeg",
-            # Primavera no tiene imagen — fallback a colores sólidos
+            "Primavera": "assets/map_verano.jpeg",   # base verde, tint primavera encima
+            "Verano":    "assets/map_verano.jpeg",
+            "Otoño":     "assets/map_otoño.jpeg",
+            "Invierno":  "assets/map_invierno.jpeg",
         }
         target = (self.grid_w, self.grid_h)
         for season, path in map_files.items():
