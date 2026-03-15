@@ -1,8 +1,8 @@
 """Constantes globales de simulación compartidas entre módulos."""
 
 # Cuántos ticks de simulación conforman un día de juego.
-# A 15 FPS: 1 día = 1 segundo real. A 4 FPS (descanso): 1 día ≈ 3.75 s real.
-TICKS_PER_DAY = 15
+# A 15 FPS: 1 día ≈ 0.67s real. A 6 FPS (descanso): 1 día ≈ 1.67s real.
+TICKS_PER_DAY = 10
 
 # Días de descanso máximo al recargar energía
 REST_DAYS = 3

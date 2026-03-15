@@ -135,7 +135,7 @@ def main():
 
         render_frame(pantalla, state, agente, CELDA_PX, particulas, fuentes, assets)
         recovering = agente.resting and state.grid[agente.y][agente.x].type_name == "casa"
-        clock.tick(4 if recovering else 15)
+        clock.tick(6 if recovering else 15)
 
     pygame.quit()
 
