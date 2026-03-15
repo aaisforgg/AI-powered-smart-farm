@@ -63,6 +63,13 @@ CROP_COLORS = {
 }
 
 
+SEASON_TINTS = {
+    "Invierno":  (150, 200, 255,  60),
+    "Verano":    (255, 200,   0,  25),
+    "Otoño":     (180, 100,   0,  40),
+    "Primavera": (  0, 200,  80,  15),
+}
+
 EVENT_TINTS = {
     "sequia":             (180,  80,   0,  60),
     "tormenta":           ( 50,  50, 150,  80),
@@ -75,7 +82,24 @@ EVENT_TINTS = {
 }
 
 
-def dibujar(pantalla, state, agente, celda_px):
+class Particle:
+    def __init__(self, ancho, alto):
+        self.ancho = ancho
+        self.alto = alto
+        self.reset()
+
+    def reset(self):
+        self.x = random.randint(0, self.ancho)
+        self.y = random.randint(-self.alto, 0)
+        self.velocidad = random.randint(2, 6)
+
+    def caer(self):
+        self.y += self.velocidad
+        if self.y > self.alto:
+            self.reset()
+
+
+def dibujar(pantalla, state, agente, celda_px, particulas, fuente):
     pantalla.fill((0, 0, 0))
     for fila in state.grid:
         for nodo in fila:
@@ -83,10 +107,18 @@ def dibujar(pantalla, state, agente, celda_px):
             pygame.draw.rect(pantalla, color,
                 (nodo.x * celda_px, nodo.y * celda_px, celda_px - 1, celda_px - 1))
 
+    w, h = pantalla.get_size()
+    overlay = pygame.Surface((w, h), pygame.SRCALPHA)
+
+    # Capa 1: tint de estación (base atmosférica)
+    season = getattr(state, "season", "")
+    if season in SEASON_TINTS:
+        overlay.fill(SEASON_TINTS[season])
+        pantalla.blit(overlay, (0, 0))
+
+    # Capa 2: tint de evento (encima del de estación)
     event_name = state.active_effects.get("event_name", "")
     if event_name in EVENT_TINTS:
-        w, h = pantalla.get_size()
-        overlay = pygame.Surface((w, h), pygame.SRCALPHA)
         overlay.fill(EVENT_TINTS[event_name])
         pantalla.blit(overlay, (0, 0))
 
@@ -95,9 +127,28 @@ def dibujar(pantalla, state, agente, celda_px):
         color = CROP_COLORS.get(crop.fase, (255, 255, 255))
         pygame.draw.rect(pantalla, color,
             (cx * celda_px + 2, cy * celda_px + 2, celda_px - 4, celda_px - 4))
+
     centro = (agente.x * celda_px + celda_px // 2, agente.y * celda_px + celda_px // 2)
     pygame.draw.circle(pantalla, (255, 255, 255), centro, celda_px // 2)
     pygame.draw.circle(pantalla, (0, 0, 255), centro, celda_px // 3)
+
+    # Partículas: nieve en Invierno, lluvia en tormenta
+    if season == "Invierno" or event_name in ("tormenta", "nevada", "nevada_paralizante"):
+        p_color = (240, 240, 255) if season == "Invierno" else (80, 80, 200)
+        for p in particulas:
+            p.caer()
+            pygame.draw.line(pantalla, p_color, (p.x, p.y), (p.x, p.y + 3), 1)
+
+    # HUD: estación + evento activo
+    evt_label = event_name if event_name else "Despejado"
+    pygame.draw.rect(pantalla, (20, 20, 20), (10, 10, 240, 65))
+    pygame.draw.rect(pantalla, (255, 255, 255), (10, 10, 240, 65), 1)
+    txt_est = fuente.render(f"ESTACIÓN: {season}", True, (255, 255, 255))
+    txt_evt = fuente.render(f"EVENTO: {evt_label}", True,
+                            (0, 255, 255) if event_name else (180, 180, 180))
+    pantalla.blit(txt_est, (20, 15))
+    pantalla.blit(txt_evt, (20, 38))
+
     pygame.display.flip()
 
 
@@ -147,6 +198,9 @@ def main():
         tick_counter,
     )
 
+    fuente = pygame.font.SysFont("Arial", 20, bold=True)
+    particulas = [Particle(ancho, alto) for _ in range(120)]
+
     clock = pygame.time.Clock()
     ejecutando = True
 
@@ -156,7 +210,7 @@ def main():
                 ejecutando = False
         pipeline.run(state)
         debug_print(state, agente)
-        dibujar(pantalla, state, agente, celda_px)
+        dibujar(pantalla, state, agente, celda_px, particulas, fuente)
         clock.tick(10)
 
     pygame.quit()
