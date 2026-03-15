@@ -24,12 +24,12 @@ def _gene_pct(value, gene_name):
 class HUDLayout:
     """Apila secciones verticalmente con padding automático."""
 
-    def __init__(self, x, width, start_y=10, gap=8):
+    def __init__(self, x, width, start_y=8, gap=10):
         self.x   = x
         self.w   = width
         self.y   = start_y
         self.gap = gap
-        self.pad = 10
+        self.pad = 12
 
     def next_section(self, height):
         """Reserva espacio para una sección. Retorna (x, y, w, h)."""
@@ -38,140 +38,166 @@ class HUDLayout:
         return rect
 
 
+# ── Constantes de layout ───────────────────────────────────────────────────────
+# Sumas de altura: 46+76+56+164+130+72+96+62 = 702 + gaps(70) + start(8) = 780
+_H_HEADER    = 46
+_H_SEASON    = 76
+_H_EVENT     = 56
+_H_AGENT     = 164
+_H_GENETICS  = 130
+_H_EVOLUTION = 72
+_H_CROPS     = 96
+_H_SIM       = 62
+
+# Espaciado interno de tarjetas
+_PAD        = 12   # padding izq/der/top de cada tarjeta
+_TITLE_H    = 26   # altura reservada para título + divisor (_section_title dibuja en y+pad, línea en y+pad+14)
+_ROW_H      = 22   # altura de fila estándar entre textos
+_CONTENT_Y0 = _PAD + _TITLE_H - _PAD + 6   # = 32  — primera fila tras el divisor
+
+
 def dibujar_hud(pantalla, state, agente, fuentes):
     px  = GRID_W + 10
     pw  = HUD_W - 20
-    pad = 10
+    pad = _PAD
 
     pygame.draw.rect(pantalla, C["bg"], (GRID_W, 0, HUD_W, WINDOW_H))
-    pygame.draw.line(pantalla, C["card_border"], (GRID_W, 0), (GRID_W, WINDOW_H), 1)
+    pygame.draw.line(pantalla, C["divider"], (GRID_W, 0), (GRID_W, WINDOW_H), 1)
 
     gen_num = agente.evolution.generation
     layout  = HUDLayout(px, pw)
 
     # ── Header ────────────────────────────────────────────────────────────
-    hx, hy, hw, hh = layout.next_section(44)
+    hx, hy, hw, hh = layout.next_section(_H_HEADER)
     _card(pantalla, hx, hy, hw, hh, radius=8)
-    _label(pantalla, fuentes, "AI SMART FARM",      hx + pad, hy + 10, C["accent"], "md")
-    _label(pantalla, fuentes, "Simulación autónoma", hx + pad, hy + 26, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, "AI SMART FARM",       hx + pad, hy + 12, C["accent"],  "md")
+    _label(pantalla, fuentes, "Simulación autónoma",  hx + pad, hy + 29, C["txt_dim"], "xs")
     gen_txt = f"Gen. {gen_num}"
     gen_w   = fuentes["xs"].size(gen_txt)[0]
-    _label(pantalla, fuentes, gen_txt, hx + hw - pad - gen_w, hy + 14, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, gen_txt, hx + hw - pad - gen_w, hy + 16, C["txt_dim"], "xs")
 
     # ── Estación ──────────────────────────────────────────────────────────
-    sx, sy, sw, sh = layout.next_section(76)
+    sx, sy, sw, sh = layout.next_section(_H_SEASON)
     season  = getattr(state, "season", "—")
     s_color = SEASON_COLORS.get(season, C["txt_mid"])
-    _card(pantalla, sx, sy, sw, sh, radius=6)
+    _card(pantalla, sx, sy, sw, sh, radius=8)
     _section_title(pantalla, fuentes, "ESTACIÓN", sx + pad, sy + pad, sw - pad * 2)
-    _label(pantalla, fuentes, season, sx + pad, sy + 28, s_color, "sm")
+    _label(pantalla, fuentes, season, sx + pad, sy + 30, s_color, "sm")
     day_in_season = getattr(state, "_season_mgr", None)
     if day_in_season and hasattr(day_in_season, "days_passed"):
         dp  = day_in_season.days_passed
         dps = day_in_season.days_per_season
-        _bar(pantalla, sx + pad, sy + 46, sw - pad * 2, 8, dp / dps, s_color, s_color)
-        _label(pantalla, fuentes, f"Día {dp} de {dps}", sx + pad, sy + 58, C["txt_dim"], "xs")
+        _bar(pantalla, sx + pad, sy + 50, sw - pad * 2, 8, dp / dps, s_color, s_color)
+        _label(pantalla, fuentes, f"Día {dp} de {dps}", sx + pad, sy + 62, C["txt_dim"], "xs")
 
     # ── Evento ────────────────────────────────────────────────────────────
-    ex, ey, ew, eh = layout.next_section(72)
+    ex, ey, ew, eh = layout.next_section(_H_EVENT)
     event_name = state.active_effects.get("event_name", "")
     evt_label  = event_name.replace("_", " ").capitalize() if event_name else "Despejado"
     evt_color  = EVENT_COLORS.get(event_name, C["accent2"]) if event_name else C["txt_mid"]
-    _card(pantalla, ex, ey, ew, eh, radius=6)
+    _card(pantalla, ex, ey, ew, eh, radius=8)
     _section_title(pantalla, fuentes, "EVENTO", ex + pad, ey + pad, ew - pad * 2)
-    pygame.draw.circle(pantalla, evt_color, (ex + pad + 5, ey + 42), 5)
-    _label(pantalla, fuentes, evt_label, ex + pad + 18, ey + 34, evt_color, "sm")
+    pygame.draw.circle(pantalla, evt_color, (ex + pad + 5, ey + 36), 5)
+    _label(pantalla, fuentes, evt_label, ex + pad + 18, ey + 29, evt_color, "sm")
 
     # ── Agente ────────────────────────────────────────────────────────────
-    ax, ay, aw, ah = layout.next_section(164)
-    energy_pct  = agente.energy / max(agente.max_energy, 1)
+    ax, ay, aw, ah = layout.next_section(_H_AGENT)
 
+    # Preparar datos
+    energy_pct = agente.energy / max(agente.max_energy, 1)
     if agente.resting:
-        estado_txt = "Descansando"
-        estado_col = C["energy_mid"]
+        estado_txt, estado_col = "Descansando", C["energy_mid"]
     elif agente.current_path:
-        estado_txt = "En ruta"
-        estado_col = C["accent"]
+        estado_txt, estado_col = "En ruta",     C["accent"]
     elif agente.goal:
-        estado_txt = "Trabajando"
-        estado_col = C["energy_hi"]
+        estado_txt, estado_col = "Trabajando",  C["energy_hi"]
     else:
-        estado_txt = "Explorando"
-        estado_col = C["accent2"]
+        estado_txt, estado_col = "Explorando",  C["accent2"]
 
-    goal    = agente.goal
-    if goal and hasattr(goal, "x") and hasattr(goal, "y"):
-        goal_str = f"Crop ({goal.x},{goal.y})"
-    else:
-        goal_str = "—"
-
+    goal = agente.goal
+    goal_str   = f"({goal.x},{goal.y})" if (goal and hasattr(goal, "x")) else "—"
     accion_str = GOAL_LABELS.get(agente.strategy, str(agente.strategy) if agente.strategy else "—")
     path_len   = len(agente.current_path) if agente.current_path else 0
     path_str   = f"{path_len} pasos" if path_len > 0 else "—"
     cosechas   = agente.life_stats.get("harvests", 0)
+    inv_items  = len(state.farmer_inventory)
+    inv_str    = f"{inv_items} items" if inv_items > 0 else "vacío"
 
-    _card(pantalla, ax, ay, aw, ah, radius=6)
+    _card(pantalla, ax, ay, aw, ah, radius=8)
     _section_title(pantalla, fuentes, "AGENTE", ax + pad, ay + pad, aw - pad * 2)
 
-    # Fila 1: Pos | Estado
-    _label(pantalla, fuentes, "Pos",              ax + pad,        ay + 28, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, f"({agente.x},{agente.y})", ax + pad + 24, ay + 28, C["txt_hi"],  "xs")
-    _label(pantalla, fuentes, estado_txt,          ax + aw // 2,    ay + 28, estado_col,  "xs")
+    # Sistema de 2 columnas con offsets fijos para alineación perfecta
+    col1_x = ax + pad           # columna izquierda — etiquetas
+    col2_x = ax + aw // 2 + 6  # columna derecha — etiquetas
+    val1_x = col1_x + 62        # valores col izquierda (>= ancho de "Cosechas" ~48px)
+    val2_x = col2_x + 44        # valores col derecha  (>= ancho de "Acc." ~26px)
+    row_h  = _ROW_H
 
-    # Fila 2: Goal
-    _label(pantalla, fuentes, "Goal",    ax + pad,        ay + 44, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, goal_str,  ax + pad + 30,   ay + 44, C["txt_hi"],  "xs")
+    r0y = ay + 32   # primera fila (tras title+divider+gap)
 
-    # Fila 3: Acción
-    _label(pantalla, fuentes, "Acción",   ax + pad,        ay + 58, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, accion_str, ax + pad + 42,   ay + 58, C["accent"],  "xs")
+    # Fila 0: Pos | Estado
+    _label(pantalla, fuentes, "Pos",               col1_x, r0y + row_h * 0, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, f"({agente.x},{agente.y})", val1_x, r0y + row_h * 0, C["txt_hi"],  "xs")
+    _label(pantalla, fuentes, estado_txt,            col2_x, r0y + row_h * 0, estado_col,  "xs")
 
-    # Fila 4: Energía barra
-    _label(pantalla, fuentes, "Energía", ax + pad, ay + 76, C["txt_dim"], "xs")
-    _bar(pantalla, ax + pad + 52, ay + 74, aw - pad * 2 - 52, 10,
-         energy_pct, C["energy_hi"], C["energy_lo"], C["energy_mid"])
+    # Fila 1: Goal | Acción
+    _label(pantalla, fuentes, "Goal",      col1_x, r0y + row_h * 1, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, goal_str,    val1_x, r0y + row_h * 1, C["txt_hi"],  "xs")
+    _label(pantalla, fuentes, "Acc.",      col2_x, r0y + row_h * 1, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, accion_str,  val2_x, r0y + row_h * 1, C["accent"],  "xs")
+
+    # Fila 2: Barra de energía (full width)
+    bar_row_y = r0y + row_h * 2
+    _label(pantalla, fuentes, "Energía", col1_x, bar_row_y, C["txt_dim"], "xs")
+    bar_x = col1_x + 58
+    bar_w = aw - pad * 2 - 58 - 30
+    _bar(pantalla, bar_x, bar_row_y + 3, bar_w, 10, energy_pct,
+         C["energy_hi"], C["energy_lo"], C["energy_mid"])
     pct_txt = f"{int(energy_pct * 100)}%"
     _label(pantalla, fuentes, pct_txt,
-           ax + aw - pad - fuentes["xs"].size(pct_txt)[0], ay + 76, C["txt_mid"], "xs")
+           ax + aw - pad - fuentes["xs"].size(pct_txt)[0], bar_row_y, C["txt_mid"], "xs")
 
-    # Fila 5: valores de energía + path
+    # Fila 3: Valores energía | Path  (desplazada manualmente por la barra)
+    r3y = bar_row_y + 20
     _label(pantalla, fuentes, f"{agente.energy:.0f}/{agente.max_energy:.0f}",
-           ax + pad, ay + 92, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, "Path",     ax + aw // 2,      ay + 92, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, path_str,   ax + aw // 2 + 30, ay + 92, C["txt_hi"],  "xs")
+           col1_x, r3y, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, "Path",   col2_x, r3y, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, path_str, val2_x, r3y, C["txt_hi"],  "xs")
 
-    # Fila 6: Cosechas
-    _label(pantalla, fuentes, f"Cosechas: {cosechas}", ax + pad, ay + 110, C["txt_dim"], "xs")
-
-    # Fila 7: Inventario
-    inv_items = len(state.farmer_inventory)
-    inv_str   = f"{inv_items} cultivos" if inv_items > 0 else "vacío"
-    _label(pantalla, fuentes, "Inv.",    ax + pad,        ay + 126, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, inv_str,   ax + pad + 30,   ay + 126, C["accent2"], "xs")
+    # Fila 4: Cosechas | Inventario
+    r4y = r3y + row_h
+    _label(pantalla, fuentes, "Cosechas", col1_x, r4y, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, str(cosechas), val1_x, r4y, C["accent2"], "xs")
+    _label(pantalla, fuentes, "Inv.",      col2_x, r4y, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, inv_str,     val2_x, r4y, C["accent2"], "xs")
 
     # ── Genética ──────────────────────────────────────────────────────────
-    gx, gy, gw, gh = layout.next_section(120)
+    gx, gy, gw, gh = layout.next_section(_H_GENETICS)
     g = agente.genes
-    _card(pantalla, gx, gy, gw, gh, radius=6)
+    _card(pantalla, gx, gy, gw, gh, radius=8)
     _section_title(pantalla, fuentes, f"GENÉTICA  —  Gen {gen_num}", gx + pad, gy + pad, gw - pad * 2)
+
     gene_stats = [
         ("E.Max",  f"{g.energy_max:.0f}",          _gene_pct(g.energy_max,         "energy_max")),
         ("Cons.",  f"{g.energy_consumption:.2f}",   _gene_pct(g.energy_consumption, "energy_consumption")),
         ("Rest.",  f"{g.rest_efficiency:.2f}",      _gene_pct(g.rest_efficiency,    "rest_efficiency")),
         ("Expl.",  f"{g.exploration_rate:.2f}",     _gene_pct(g.exploration_rate,   "exploration_rate")),
     ]
-    col_w = (gw - pad * 2) // 2
+    gene_col_w   = (gw - pad * 2) // 2  # ancho de cada columna de gen
+    gene_row_h   = 50                    # altura por fila de gen (label + bar con espacio)
+    gene_row0_y  = gy + 32              # primera fila tras título
+
     for i, (lbl, val, pct) in enumerate(gene_stats):
         col = i % 2
         row = i // 2
-        bx  = gx + pad + col * col_w
-        by  = gy + 30 + row * 46
+        bx  = gx + pad + col * gene_col_w
+        by  = gene_row0_y + row * gene_row_h
         _label(pantalla, fuentes, lbl, bx,      by, C["txt_dim"], "xs")
-        _label(pantalla, fuentes, val, bx + 36, by, C["txt_hi"],  "xs")
-        _bar(pantalla, bx, by + 14, col_w - 8, 6, pct, C["accent"], C["accent"], None)
+        _label(pantalla, fuentes, val, bx + 38, by, C["txt_hi"],  "xs")
+        _bar(pantalla, bx, by + 16, gene_col_w - 10, 7, pct, C["accent"], C["accent"], None)
 
     # ── Evolución ─────────────────────────────────────────────────────────
-    vx, vy, vw, vh = layout.next_section(78)
+    vx, vy, vw, vh = layout.next_section(_H_EVOLUTION)
     evo          = agente.evolution
     last_fitness = evo.fitness_history[-1] if evo.fitness_history else 0.0
     best_fitness = evo.best_fitness
@@ -184,33 +210,41 @@ def dibujar_hud(pantalla, state, agente, fuentes):
         trend     = "—"
         trend_col = C["txt_dim"]
 
-    _card(pantalla, vx, vy, vw, vh, radius=6)
+    evo_col1_x = vx + pad
+    evo_col2_x = vx + vw // 2 + 6
+    evo_val1_x = evo_col1_x + 38
+    evo_val2_x = evo_col2_x + 46
+
+    _card(pantalla, vx, vy, vw, vh, radius=8)
     _section_title(pantalla, fuentes, "EVOLUCIÓN", vx + pad, vy + pad, vw - pad * 2)
 
-    # Fila 1: Gen | Fitness actual
-    _label(pantalla, fuentes, "Gen.",     vx + pad,        vy + 28, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, str(gen_num), vx + pad + 30, vy + 28, C["txt_hi"],  "xs")
-    _label(pantalla, fuentes, "Actual",   vx + vw // 2,    vy + 28, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, f"{last_fitness:.1f}", vx + vw // 2 + 42, vy + 28, C["txt_hi"], "xs")
+    # Fila 0: Gen | Fitness actual
+    _label(pantalla, fuentes, "Gen.",         evo_col1_x, vy + 32, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, str(gen_num),   evo_val1_x, vy + 32, C["txt_hi"],  "xs")
+    _label(pantalla, fuentes, "Actual",        evo_col2_x, vy + 32, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, f"{last_fitness:.1f}", evo_val2_x, vy + 32, C["txt_hi"], "xs")
 
-    # Fila 2: Mejor | Tendencia
-    _label(pantalla, fuentes, "Mejor",    vx + pad,        vy + 44, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, f"{best_fitness:.1f}", vx + pad + 38, vy + 44, C["accent2"], "xs")
-    _label(pantalla, fuentes, "Tend.",    vx + vw // 2,    vy + 44, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, trend,      vx + vw // 2 + 36, vy + 44, trend_col,   "sm")
+    # Fila 1: Mejor | Tendencia
+    _label(pantalla, fuentes, "Mejor",         evo_col1_x, vy + 54, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, f"{best_fitness:.1f}", evo_val1_x + 4, vy + 54, C["accent2"], "xs")
+    _label(pantalla, fuentes, "Tend.",          evo_col2_x, vy + 54, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, trend,             evo_val2_x, vy + 54, trend_col,   "sm")
 
     # ── Cultivos ──────────────────────────────────────────────────────────
-    cx, cy_s, cw, ch = layout.next_section(100)
+    cx, cy_s, cw, ch = layout.next_section(_H_CROPS)
     fase_counts = {0: 0, 1: 0, 2: 0}
     for crop in state.crops:
         fase_counts[crop.fase] = fase_counts.get(crop.fase, 0) + 1
     total = len(state.crops)
 
-    _card(pantalla, cx, cy_s, cw, ch, radius=6)
+    crop_row_h  = 22   # espaciado entre filas de cultivo
+    crop_row0_y = cy_s + 30
+
+    _card(pantalla, cx, cy_s, cw, ch, radius=8)
     _section_title(pantalla, fuentes, f"CULTIVOS  ({total} total)", cx + pad, cy_s + pad, cw - pad * 2)
     for i, (fase, label) in enumerate(CROP_PHASE_LABELS.items()):
         bx  = cx + pad
-        by  = cy_s + 28 + i * 24
+        by  = crop_row0_y + i * crop_row_h
         cnt = fase_counts.get(fase, 0)
         pygame.draw.circle(pantalla, CROP_PHASE_COLORS[fase], (bx + 4, by + 6), 4)
         _label(pantalla, fuentes, label, bx + 14, by, C["txt_mid"], "xs")
@@ -221,24 +255,29 @@ def dibujar_hud(pantalla, state, agente, fuentes):
                  cnt / total, CROP_PHASE_COLORS[fase], CROP_PHASE_COLORS[fase])
 
     # ── Simulación ────────────────────────────────────────────────────────
-    smx, smy, smw, smh = layout.next_section(66)
-    visited = len(agente.memory.get("visited_tiles", set()))
+    smx, smy, smw, smh = layout.next_section(_H_SIM)
+    visited     = len(agente.memory.get("visited_tiles", set()))
     total_tiles = 80 * 65
     inventory   = len(state.farmer_inventory)
 
-    _card(pantalla, smx, smy, smw, smh, radius=6)
+    sim_col1_x = smx + pad
+    sim_col2_x = smx + smw // 2 + 6
+    sim_val1_x = sim_col1_x + 32
+    sim_val2_x = sim_col2_x + 38
+
+    _card(pantalla, smx, smy, smw, smh, radius=8)
     _section_title(pantalla, fuentes, "SIMULACIÓN", smx + pad, smy + pad, smw - pad * 2)
 
-    # Fila 1: Tick | Gen.
-    _label(pantalla, fuentes, "Tick",        smx + pad,        smy + 28, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, str(state.tick), smx + pad + 30,  smy + 28, C["txt_hi"],  "sm")
-    _label(pantalla, fuentes, "Gen.",        smx + smw // 2,   smy + 28, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, str(gen_num),  smx + smw // 2 + 30, smy + 28, C["txt_mid"], "sm")
+    # Fila 0: Tick | Gen.
+    _label(pantalla, fuentes, "Tick",          sim_col1_x, smy + 32, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, str(state.tick), sim_val1_x, smy + 32, C["txt_hi"],  "sm")
+    _label(pantalla, fuentes, "Gen.",           sim_col2_x, smy + 32, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, str(gen_num),     sim_val2_x, smy + 32, C["txt_mid"], "sm")
 
-    # Fila 2: Inventario | Tiles
+    # Fila 1: Inventario | Tiles explorados
     inv_str   = f"{inventory} items"
     tiles_str = f"{visited}/{total_tiles}"
-    _label(pantalla, fuentes, "Inv.",        smx + pad,        smy + 44, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, inv_str,       smx + pad + 26,   smy + 44, C["txt_mid"], "xs")
-    _label(pantalla, fuentes, "Tiles",       smx + smw // 2,   smy + 44, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, tiles_str,     smx + smw // 2 + 34, smy + 44, C["txt_mid"], "xs")
+    _label(pantalla, fuentes, "Inv.",     sim_col1_x, smy + 48, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, inv_str,    sim_val1_x, smy + 48, C["txt_mid"], "xs")
+    _label(pantalla, fuentes, "Tiles",    sim_col2_x, smy + 48, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, tiles_str,  sim_val2_x, smy + 48, C["txt_mid"], "xs")
