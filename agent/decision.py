@@ -4,7 +4,7 @@ from .strategies import StrategyManager
 class DecisionSystem:
 
     def __init__(self):
-        self.goal_manager = GoalManager()
+        self.goal_manager = GoalManager()       # ← esto ya llama __init__
         self.strategy_manager = StrategyManager()
 
     def decide(self, state, agent):

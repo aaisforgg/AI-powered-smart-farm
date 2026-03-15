@@ -52,23 +52,28 @@ class AStarPathfinder(Pathfinder):
         
         return None
     
-    def _get_neighbors(
-        self, x: int, y: int, rows: int, cols: int, grid: list[list]
-    ) -> list[tuple[int, int, float]]:
-        """
-            Devuelve vecinos válidos como (x, y, costo). Solo 4 direcciones.
-
-        """
+    def _get_neighbors(self, x, y, rows, cols, grid):
         directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
         neighbors = []
         
         for dx, dy in directions:
             nx, ny = x + dx, y + dy
-            
+        
             if 0 <= nx < cols and 0 <= ny < rows:
                 node = grid[ny][nx]
+        
                 if node.walkable:
-                    neighbors.append((nx, ny, node.cost))
+                    # Penalización por cercanía a obstáculos
+                    wall_penalty = 0
+                    
+                    for ax, ay in [(-1,0),(1,0),(0,-1),(0,1),(-1,-1),(1,-1),(-1,1),(1,1)]:
+                        ox, oy = nx + ax, ny + ay
+                    
+                        if 0 <= ox < cols and 0 <= oy < rows:
+                    
+                            if not grid[oy][ox].walkable:
+                                wall_penalty += 0.5
+                    neighbors.append((nx, ny, node.cost + wall_penalty))
         return neighbors
     
     def _reconstruct_path(

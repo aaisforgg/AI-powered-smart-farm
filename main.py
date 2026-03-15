@@ -184,8 +184,8 @@ def main():
 
         for crop in state.crops:
             crop.crecer(
-                tasa_secado=1.0,
-                umbral_crecimiento=20.0
+               tasa_secado=1.0,
+                ticks_por_fase=20
             )
 
         # ==========================
