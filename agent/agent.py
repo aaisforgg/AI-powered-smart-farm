@@ -229,8 +229,10 @@ class Agent:
     def _make_decision(self, state):
         """Decide goal y calcula path hacia él."""
         self.goal, self.strategy = self.decision_system.decide(state, self)
-        print(f"[Agent] Decisión → goal={self.goal} strategy={self.strategy}")
-        print(f"[Agent] Crops conocidos: {list(self.memory['known_crops'].keys())}")
+        if not self.goal:
+            reason = self.decision_system.goal_manager.last_reject_reason
+            known = list(self.memory["known_crops"].keys())
+            print(f"[Agent] Sin goal — razón: {reason} | crops conocidos: {known}")
 
         if not self.goal:
             return

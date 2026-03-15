@@ -35,9 +35,10 @@ class GoalManager:
 
             had_valid_strategy = True
 
-            # HARVEST y WATER urgente (humedad < 30) nunca se bloquean por acciones recientes
+            # HARVEST y PLANT nunca se bloquean (son acciones únicas por crop)
+            # WATER urgente tampoco se bloquea
             is_urgent_water = strategy == "WATER" and crop.humedad < 30
-            if strategy != "HARVEST" and not is_urgent_water and (strategy, crop.pos) in recent_actions:
+            if strategy not in ("HARVEST", "PLANT") and not is_urgent_water and (strategy, crop.pos) in recent_actions:
                 continue
 
             cx, cy = crop.pos

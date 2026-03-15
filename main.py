@@ -45,7 +45,7 @@ def posicion_random_valida(grid):
 
 def spawn_crops(grid, count=None):
     if count is None:
-        count = random.randint(8, 12)
+        count = random.randint(12, 18)
 
     cultivo_tiles = [
         (tile.x, tile.y)
