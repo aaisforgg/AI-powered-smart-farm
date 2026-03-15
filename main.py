@@ -64,26 +64,33 @@ EVENT_TINTS = {
 
 # ── Paleta HUD ────────────────────────────────────────────────────────────────
 C = {
-    "bg":           ( 28,  24,  20),
-    "panel":        ( 36,  31,  26),
-    "card":         ( 44,  38,  32),
-    "card_border":  ( 68,  60,  50),
-    "accent":       (200, 175, 110),
-    "accent2":      (140, 190, 120),
-    "divider":      ( 60,  54,  46),
-    "txt_hi":       (220, 215, 200),
-    "txt_mid":      (155, 148, 130),
-    "txt_dim":      ( 95,  90,  78),
-    "energy_hi":    (120, 190,  80),
-    "energy_mid":   (200, 170,  50),
-    "energy_lo":    (190,  70,  50),
+    "bg":           ( 10,  12,  28),
+    "panel":        ( 18,  22,  48),
+    "card":         ( 26,  32,  64),
+    "card_border":  ( 48,  58, 110),
+    "accent":       ( 80, 160, 255),
+    "accent2":      (120, 220, 160),
+    "divider":      ( 38,  46,  90),
+    "txt_hi":       (230, 235, 255),
+    "txt_mid":      (155, 165, 210),
+    "txt_dim":      ( 80,  92, 148),
+    "energy_hi":    ( 80, 220, 120),
+    "energy_mid":   (240, 200,  60),
+    "energy_lo":    (220,  70,  60),
 }
 
 SEASON_COLORS = {
-    "Primavera": (100, 190,  90),
-    "Verano":    (210, 170,  50),
-    "Otoño":     (200, 110,  40),
-    "Invierno":  (160, 190, 210),
+    "Primavera": ( 80, 220, 100),
+    "Verano":    (255, 200,  50),
+    "Otoño":     (220, 120,  40),
+    "Invierno":  (150, 200, 255),
+}
+
+SEASON_ICONS = {
+    "Primavera": "☀",
+    "Verano":    "🌞",
+    "Otoño":     "🍂",
+    "Invierno":  "❄",
 }
 
 EVENT_COLORS = {
@@ -98,13 +105,13 @@ EVENT_COLORS = {
 }
 
 GOAL_LABELS = {
-    "HARVEST":  "Cosechando",
-    "WATER":    "Regando",
-    "PLANT":    "Plantando",
-    "EXPLORE":  "Explorando el campo",
-    "REST":     "Descansando",
-    "GO_HOME":  "Volviendo a casa",
-    None:       "Pensando...",
+    "HARVEST":  "Cosechar",
+    "WATER":    "Regar",
+    "PLANT":    "Plantar",
+    "EXPLORE":  "Explorar",
+    "REST":     "Descansar",
+    "GO_HOME":  "Ir a casa",
+    None:       "—",
 }
 
 ENERGY_LABELS = {
@@ -126,7 +133,7 @@ EVENT_LABELS = {
     "plaga_de_insectos":  "Plaga de insectos",
 }
 
-CROP_PHASE_LABELS = {0: "Recién plantadas", 1: "Creciendo", 2: "Listas para cosechar"}
+CROP_PHASE_LABELS = {0: "Semilla", 1: "Creciendo", 2: "Lista"}
 CROP_PHASE_COLORS = {0: (180, 140, 20), 1: (80, 200, 80), 2: (255, 80, 80)}
 
 
@@ -244,13 +251,17 @@ def dibujar_grid(pantalla, state, agente, celda_px, particulas):
         pygame.draw.rect(pantalla, color,
             (cx * celda_px + 2, cy * celda_px + 2, celda_px - 4, celda_px - 4))
 
-    # Agente
+    # Agente: glow + círculo principal
     ax = agente.x * celda_px + celda_px // 2
     ay = agente.y * celda_px + celda_px // 2
     r  = celda_px // 2
-    pygame.draw.circle(pantalla, (240, 235, 210), (ax, ay), r)
-    pygame.draw.circle(pantalla, (160, 100,  40), (ax, ay), r - 2)
-    pygame.draw.circle(pantalla, (240, 235, 210), (ax, ay), r // 3)
+    glow_surf = pygame.Surface((r * 6, r * 6), pygame.SRCALPHA)
+    pygame.draw.circle(glow_surf, (80, 160, 255, 45), (r * 3, r * 3), r * 3)
+    pygame.draw.circle(glow_surf, (80, 160, 255, 70), (r * 3, r * 3), r * 2)
+    pantalla.blit(glow_surf, (ax - r * 3, ay - r * 3))
+    pygame.draw.circle(pantalla, (200, 220, 255), (ax, ay), r)
+    pygame.draw.circle(pantalla, ( 60, 130, 255), (ax, ay), r - 2)
+    pygame.draw.circle(pantalla, (180, 210, 255), (ax, ay), r // 2)
 
     # Partículas
     if season == "Invierno" or event_name in ("tormenta", "nevada", "nevada_paralizante"):
@@ -286,80 +297,116 @@ def dibujar_hud(pantalla, state, agente, fuentes):
     gen_num = agente.evolution.generation
 
     # ── Header ──────────────────────────────────────────────────────────────
-    _card(pantalla, px, 10, pw, 36, radius=6)
-    _label(pantalla, fuentes, "Smart Farm", px + pad, 18, C["txt_hi"], "md")
+    _card(pantalla, px, 10, pw, 44, radius=8)
+    _label(pantalla, fuentes, "AI SMART FARM", px + pad, 20, C["accent"], "md")
+    _label(pantalla, fuentes, "Simulación autonoma", px + pad, 36, C["txt_dim"], "xs")
     gen_txt = f"Gen. {gen_num}"
     gen_w   = fuentes["xs"].size(gen_txt)[0]
     _label(pantalla, fuentes, gen_txt, px + pw - pad - gen_w, 22, C["txt_dim"], "xs")
 
-    cy = 58
+    cy = 66  # cursor y
 
-    # ── Clima ────────────────────────────────────────────────────────────────
-    season     = getattr(state, "season", "—")
-    s_color    = SEASON_COLORS.get(season, C["txt_mid"])
-    event_name = state.active_effects.get("event_name", "")
-    evt_label  = EVENT_LABELS.get(event_name, "Sin incidentes")
-    evt_color  = EVENT_COLORS.get(event_name, C["txt_mid"])
-
-    _card(pantalla, px, cy, pw, 72, radius=6)
-    _section_title(pantalla, fuentes, "CLIMA", px + pad, cy + pad, pw - pad * 2)
-
-    smgr = getattr(state, "_season_mgr", None)
-    if smgr and hasattr(smgr, "days_passed"):
-        dp, dps = smgr.days_passed, smgr.days_per_season
-        season_line = f"{season}  ·  día {dp} de {dps}"
-    else:
-        season_line = season
-    _label(pantalla, fuentes, season_line, px + pad, cy + 26, s_color, "sm")
-
-    if smgr:
-        _bar(pantalla, px + pad, cy + 42, pw - pad * 2, 6,
+    # ── Estación (86px) ───────────────────────────────────────────────────────
+    season    = getattr(state, "season", "—")
+    s_color   = SEASON_COLORS.get(season, C["txt_mid"])
+    _card(pantalla, px, cy, pw, 86, radius=6)
+    _section_title(pantalla, fuentes, "ESTACIÓN", px + pad, cy + pad, pw - pad * 2)
+    _label(pantalla, fuentes, season, px + pad, cy + 34, s_color, "sm")
+    day_in_season = getattr(state, "_season_mgr", None)
+    if day_in_season and hasattr(day_in_season, "days_passed"):
+        dp  = day_in_season.days_passed
+        dps = day_in_season.days_per_season
+        _bar(pantalla, px + pad, cy + 56, pw - pad * 2, 10,
              dp / dps, s_color, s_color)
+        _label(pantalla, fuentes, f"Día {dp} de {dps}", px + pad, cy + 72,
+               C["txt_dim"], "xs")
+    cy += 96
 
-    dot_x, dot_y = px + pad + 4, cy + 57
-    pygame.draw.circle(pantalla, evt_color, (dot_x, dot_y), 3)
-    _label(pantalla, fuentes, evt_label, dot_x + 10, dot_y - 7, evt_color, "xs")
-    cy += 82
+    # ── Evento (86px) ─────────────────────────────────────────────────────────
+    event_name = state.active_effects.get("event_name", "")
+    evt_label  = event_name.replace("_", " ").capitalize() if event_name else "Despejado"
+    evt_color  = EVENT_COLORS.get(event_name, C["accent2"]) if event_name else C["txt_mid"]
+    _card(pantalla, px, cy, pw, 86, radius=6)
+    _section_title(pantalla, fuentes, "EVENTO", px + pad, cy + pad, pw - pad * 2)
+    pygame.draw.circle(pantalla, evt_color, (px + pad + 5, cy + 54), 5)
+    _label(pantalla, fuentes, evt_label, px + pad + 18, cy + 44, evt_color, "sm")
+    cy += 96
 
-    # ── El agente ─────────────────────────────────────────────────────────────
-    energy_pct   = agente.energy / max(agente.max_energy, 1)
-    elabel, ekey = _energy_label(energy_pct)
-    ecolor       = C[ekey]
-    goal_str     = GOAL_LABELS.get(agente.goal, "Pensando...")
-
-    _card(pantalla, px, cy, pw, 90, radius=6)
-    _section_title(pantalla, fuentes, "EL AGENTE", px + pad, cy + pad, pw - pad * 2)
-    _label(pantalla, fuentes, goal_str, px + pad, cy + 26, C["txt_hi"], "sm")
-
-    _label(pantalla, fuentes, "Energía", px + pad, cy + 46, C["txt_dim"], "xs")
-    _bar(pantalla, px + pad + 52, cy + 46, pw - pad * 2 - 80, 9,
+    # ── Agente (138px) ────────────────────────────────────────────────────────
+    energy_pct = agente.energy / max(agente.max_energy, 1)
+    goal_str   = GOAL_LABELS.get(agente.goal, str(agente.goal) if agente.goal else "—")
+    _card(pantalla, px, cy, pw, 138, radius=6)
+    _section_title(pantalla, fuentes, "AGENTE", px + pad, cy + pad, pw - pad * 2)
+    _label(pantalla, fuentes, "Pos",  px + pad, cy + 32, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, f"({agente.x}, {agente.y})", px + pad + 24, cy + 32, C["txt_hi"], "xs")
+    _label(pantalla, fuentes, "Goal", px + pw // 2, cy + 32, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, goal_str, px + pw // 2 + 28, cy + 32, C["accent"], "xs")
+    estado_txt = "Descansando" if agente.resting else "Activo"
+    estado_col = C["energy_mid"] if agente.resting else C["energy_hi"]
+    _label(pantalla, fuentes, estado_txt, px + pad, cy + 54, estado_col, "xs")
+    _label(pantalla, fuentes, "Energía", px + pad, cy + 76, C["txt_dim"], "xs")
+    _bar(pantalla, px + pad + 52, cy + 74, pw - pad * 2 - 52, 12,
          energy_pct, C["energy_hi"], C["energy_lo"], C["energy_mid"])
-    _label(pantalla, fuentes, elabel, px + pw - pad - fuentes["xs"].size(elabel)[0], cy + 46,
-           ecolor, "xs")
-
+    pct_txt = f"{int(energy_pct * 100)}%"
+    _label(pantalla, fuentes, pct_txt, px + pw - pad - fuentes["xs"].size(pct_txt)[0], cy + 76,
+           C["txt_mid"], "xs")
+    _label(pantalla, fuentes, f"{agente.energy:.0f} / {agente.max_energy:.0f}",
+           px + pad, cy + 100, C["txt_dim"], "xs")
     cosechas = agente.life_stats.get("harvests", 0)
-    _label(pantalla, fuentes, f"Cosechas esta vida:  {cosechas}",
-           px + pad, cy + 68, C["txt_dim"], "xs")
-    cy += 100
+    _label(pantalla, fuentes, f"Cosechas:  {cosechas}",
+           px + pw // 2, cy + 100, C["txt_dim"], "xs")
+    cy += 148
 
-    # ── Los cultivos ──────────────────────────────────────────────────────────
+    # ── Genética (144px) ──────────────────────────────────────────────────────
+    g       = agente.genes
+    gen_num = agente.evolution.generation
+    _card(pantalla, px, cy, pw, 144, radius=6)
+    _section_title(pantalla, fuentes, f"GENÉTICA  —  Gen {gen_num}", px + pad, cy + pad, pw - pad * 2)
+    stats = [
+        ("E.Max",  f"{g.energy_max:.0f}"),
+        ("Cons.",  f"{g.energy_consumption:.2f}"),
+        ("Rest.",  f"{g.rest_efficiency:.2f}"),
+        ("Expl.",  f"{g.exploration_rate:.2f}"),
+    ]
+    col_w = (pw - pad * 2) // 2
+    for i, (lbl, val) in enumerate(stats):
+        col = i % 2
+        row = i // 2
+        bx  = px + pad + col * col_w
+        by  = cy + 32 + row * 52
+        _label(pantalla, fuentes, lbl, bx, by, C["txt_dim"], "xs")
+        _label(pantalla, fuentes, val, bx + 36, by, C["txt_hi"], "xs")
+        _bar(pantalla, bx, by + 16, col_w - 8, 8, 0.5, C["accent"], C["accent"], None)
+    cy += 154
+
+    # ── Cultivos (122px) ──────────────────────────────────────────────────────
     fase_counts = {0: 0, 1: 0, 2: 0}
     for crop in state.crops:
         fase_counts[crop.fase] = fase_counts.get(crop.fase, 0) + 1
     total = len(state.crops)
 
-    _card(pantalla, px, cy, pw, 86, radius=6)
-    _section_title(pantalla, fuentes, "CULTIVOS", px + pad, cy + pad, pw - pad * 2)
+    _card(pantalla, px, cy, pw, 122, radius=6)
+    _section_title(pantalla, fuentes, f"CULTIVOS  ({total} total)", px + pad, cy + pad, pw - pad * 2)
     for i, (fase, label) in enumerate(CROP_PHASE_LABELS.items()):
         bx  = px + pad
-        by  = cy + 26 + i * 20
+        by  = cy + 30 + i * 30
         cnt = fase_counts.get(fase, 0)
-        col = CROP_PHASE_COLORS[fase]
-        pygame.draw.circle(pantalla, col, (bx + 4, by + 5), 4)
+        pygame.draw.circle(pantalla, CROP_PHASE_COLORS[fase], (bx + 4, by + 6), 4)
         _label(pantalla, fuentes, label, bx + 14, by, C["txt_mid"], "xs")
         cnt_w = fuentes["xs"].size(str(cnt))[0]
         _label(pantalla, fuentes, str(cnt), px + pw - pad - cnt_w, by, C["txt_hi"], "xs")
-    cy += 96
+        if total > 0:
+            _bar(pantalla, bx + 14, by + 16, pw - pad * 2 - 14, 6,
+                 cnt / total, CROP_PHASE_COLORS[fase], CROP_PHASE_COLORS[fase])
+    cy += 132
+
+    # ── Simulación (78px) ─────────────────────────────────────────────────────
+    _card(pantalla, px, cy, pw, 78, radius=6)
+    _section_title(pantalla, fuentes, "SIMULACIÓN", px + pad, cy + pad, pw - pad * 2)
+    _label(pantalla, fuentes, "Tick", px + pad, cy + 32, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, str(state.tick), px + pad + 30, cy + 32, C["txt_hi"], "sm")
+    _label(pantalla, fuentes, "Vel.", px + pw // 2, cy + 32, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, "10 t/s", px + pw // 2 + 28, cy + 32, C["txt_mid"], "sm")
 
 
 # ── Función de dibujo principal ───────────────────────────────────────────────
