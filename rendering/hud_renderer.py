@@ -9,10 +9,12 @@ from rendering.helpers import _card, _label, _bar, _section_title
 
 
 GENE_RANGES = {
-    "energy_max":         (150,  250),
+    "energy_max":         (80,   250),
     "energy_consumption": (0.1,  1.5),
     "rest_efficiency":    (0.5,  8.0),
     "exploration_rate":   (0.01, 1.0),
+    "water_efficiency":   (15,   100),
+    "risk_tolerance":     (0.05, 0.60),
 }
 
 
@@ -39,13 +41,13 @@ class HUDLayout:
 
 
 # ── Constantes de layout ───────────────────────────────────────────────────────
-# Sumas de altura: 46+76+56+144+126+74+100+80 = 702 + gaps(70) + start(8) = 780
+# Sumas de altura: 46+76+56+144+136+64+100+80 = 702 + gaps(70) + start(8) = 780
 _H_HEADER    = 46
 _H_SEASON    = 76
 _H_EVENT     = 56
 _H_AGENT     = 144
-_H_GENETICS  = 126   # reducido (espacio libre → simulación)
-_H_EVOLUTION = 74
+_H_GENETICS  = 136   # 3 filas × 2 col (6 genes) — HUD más ancho da espacio extra
+_H_EVOLUTION = 64    # compactado para compensar genetics +10px
 _H_CROPS     = 100
 _H_SIM       = 80    # más espacio para las 2 filas de datos
 
@@ -182,9 +184,11 @@ def dibujar_hud(pantalla, state, agente, fuentes):
         ("Cons.",  f"{g.energy_consumption:.2f}",   _gene_pct(g.energy_consumption, "energy_consumption")),
         ("Rest.",  f"{g.rest_efficiency:.2f}",      _gene_pct(g.rest_efficiency,    "rest_efficiency")),
         ("Expl.",  f"{g.exploration_rate:.2f}",     _gene_pct(g.exploration_rate,   "exploration_rate")),
+        ("Agua",   f"{g.water_efficiency:.1f}",     _gene_pct(g.water_efficiency,   "water_efficiency")),
+        ("Riesgo", f"{g.risk_tolerance:.2f}",       _gene_pct(g.risk_tolerance,     "risk_tolerance")),
     ]
     gene_col_w   = (gw - pad * 2) // 2  # ancho de cada columna de gen
-    gene_row_h   = 50                    # altura por fila de gen (label + bar con espacio)
+    gene_row_h   = 34                    # 3 filas × 34px caben en los 136px de la sección
     gene_row0_y  = gy + 32              # primera fila tras título
 
     for i, (lbl, val, pct) in enumerate(gene_stats):
@@ -193,8 +197,8 @@ def dibujar_hud(pantalla, state, agente, fuentes):
         bx  = gx + pad + col * gene_col_w
         by  = gene_row0_y + row * gene_row_h
         _label(pantalla, fuentes, lbl, bx,      by, C["txt_dim"], "xs")
-        _label(pantalla, fuentes, val, bx + 38, by, C["txt_hi"],  "xs")
-        _bar(pantalla, bx, by + 16, gene_col_w - 10, 7, pct, C["accent"], C["accent"], None)
+        _label(pantalla, fuentes, val, bx + 44, by, C["txt_hi"],  "xs")
+        _bar(pantalla, bx, by + 14, gene_col_w - 10, 6, pct, C["accent"], C["accent"], None)
 
     # ── Evolución ─────────────────────────────────────────────────────────
     vx, vy, vw, vh = layout.next_section(_H_EVOLUTION)
@@ -215,8 +219,11 @@ def dibujar_hud(pantalla, state, agente, fuentes):
     evo_val1_x = evo_col1_x + 38
     evo_val2_x = evo_col2_x + 46
 
+    elite_count  = len(evo.elite_genes)
+    evo_title    = f"EVOLUCIÓN  —  {elite_count} elite{'s' if elite_count != 1 else ''}"
+
     _card(pantalla, vx, vy, vw, vh, radius=8)
-    _section_title(pantalla, fuentes, "EVOLUCIÓN", vx + pad, vy + pad, vw - pad * 2)
+    _section_title(pantalla, fuentes, evo_title, vx + pad, vy + pad, vw - pad * 2)
 
     # Fila 0: Gen | Fitness actual
     _label(pantalla, fuentes, "Gen.",         evo_col1_x, vy + 32, C["txt_dim"], "xs")
@@ -225,10 +232,10 @@ def dibujar_hud(pantalla, state, agente, fuentes):
     _label(pantalla, fuentes, f"{last_fitness:.1f}", evo_val2_x, vy + 32, C["txt_hi"], "xs")
 
     # Fila 1: Mejor | Tendencia
-    _label(pantalla, fuentes, "Mejor",         evo_col1_x, vy + 54, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, f"{best_fitness:.1f}", evo_val1_x + 4, vy + 54, C["accent2"], "xs")
-    _label(pantalla, fuentes, "Tend.",          evo_col2_x, vy + 54, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, trend,             evo_val2_x, vy + 54, trend_col,   "sm")
+    _label(pantalla, fuentes, "Mejor",         evo_col1_x, vy + 50, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, f"{best_fitness:.1f}", evo_val1_x + 4, vy + 50, C["accent2"], "xs")
+    _label(pantalla, fuentes, "Tend.",          evo_col2_x, vy + 50, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, trend,             evo_val2_x, vy + 50, trend_col,   "sm")
 
     # ── Cultivos ──────────────────────────────────────────────────────────
     cx, cy_s, cw, ch = layout.next_section(_H_CROPS)

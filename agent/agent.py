@@ -39,7 +39,7 @@ class Agent:
 
         self.energy = self.genes.energy_max
         self.max_energy = self.genes.energy_max
-        self.energy_threshold = self.genes.energy_max * 0.06
+        self.energy_threshold = self.genes.energy_max * self.genes.risk_tolerance
         self.energy_recovery = 4.0
         self.resting = False
         self.rest_ticks = 0
@@ -340,7 +340,7 @@ class Agent:
             print(f"[EXECUTE] strategy={self.strategy} en pos={crop.pos} dist={d}")
 
         if self.strategy == "WATER":
-            crop.humedad = min(100.0, crop.humedad + 50.0)
+            crop.humedad = min(100.0, crop.humedad + self.genes.water_efficiency)
 
         elif self.strategy == "PLANT":
             crop.fase = 1
