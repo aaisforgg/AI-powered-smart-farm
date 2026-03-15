@@ -63,6 +63,18 @@ CROP_COLORS = {
 }
 
 
+EVENT_TINTS = {
+    "sequia":             (180,  80,   0,  60),
+    "tormenta":           ( 50,  50, 150,  80),
+    "nevada":             (200, 200, 255,  70),
+    "inundacion":         (  0,  50, 180,  70),
+    "plaga":              (  0, 150,   0,  60),
+    "gran_deslave":       (100,  60,   0,  80),
+    "nevada_paralizante": (200, 200, 255, 110),
+    "plaga_de_insectos":  (  0, 180,   0,  80),
+}
+
+
 def dibujar(pantalla, state, agente, celda_px):
     pantalla.fill((0, 0, 0))
     for fila in state.grid:
@@ -70,6 +82,14 @@ def dibujar(pantalla, state, agente, celda_px):
             color = COLORES.get(nodo.type_name, (255, 255, 255))
             pygame.draw.rect(pantalla, color,
                 (nodo.x * celda_px, nodo.y * celda_px, celda_px - 1, celda_px - 1))
+
+    event_name = state.active_effects.get("event_name", "")
+    if event_name in EVENT_TINTS:
+        w, h = pantalla.get_size()
+        overlay = pygame.Surface((w, h), pygame.SRCALPHA)
+        overlay.fill(EVENT_TINTS[event_name])
+        pantalla.blit(overlay, (0, 0))
+
     for crop in state.crops:
         cx, cy = crop.pos
         color = CROP_COLORS.get(crop.fase, (255, 255, 255))

@@ -50,6 +50,7 @@ class EventManager:
         print(f"[Evento] {self.active_event.upper()} por {self.duration_remaining} ticks")
 
         effects = state.active_effects
+        effects["event_name"] = self.active_event
 
         if self.active_event == "sequia":
             # Los cultivos se secan más rápido (el step tick_crops puede leer esto)
@@ -87,8 +88,9 @@ class EventManager:
             effects["energy_drain_per_tick"] = 3.0
 
         elif self.active_event == "plaga_de_insectos":
-            # Insectos destruyen cultivos directamente y aceleran el secado
+            # Insectos destruyen cultivos directamente, aceleran el secado y dañan al agente
             effects["crop_dry_multiplier"] = 4.0
+            effects["energy_drain_per_tick"] = 1.0
             self._damage_random_crops(state, count=2)
 
     def _clear_event(self, state):
