@@ -56,3 +56,4 @@ class SeasonManager:
             self.current_season_idx = (self.current_season_idx + 1) % len(self.SEASONS)
             state.season = self.current_season
             print(f"La estación ha cambiado a: {self.current_season}")
+            event_manager.on_season_change(state, self.current_season)
