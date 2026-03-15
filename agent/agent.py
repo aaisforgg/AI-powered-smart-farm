@@ -180,7 +180,19 @@ class Agent:
             self.life_stats["steps"] += 1
 
             tile = state.grid[self.y][self.x]
-            self.energy -= tile.cost * self.genes.energy_consumption
+
+            # Costo base del tile × gen de consumo
+            move_cost = tile.cost * self.genes.energy_consumption
+
+            # Multiplicador por eventos globales (tormenta, nevada, etc.)
+            move_multiplier = state.active_effects.get("movement_cost_multiplier", 1.0)
+            move_cost *= move_multiplier
+
+            # Drain pasivo por eventos (tormenta eléctrica, etc.)
+            energy_drain = state.active_effects.get("energy_drain_per_tick", 0.0)
+
+            self.energy -= (move_cost + energy_drain)
+            
             if self.energy <= 0:
                 self.energy = 0
                 self.life_stats["starved"] = True
