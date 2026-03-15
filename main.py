@@ -1,6 +1,8 @@
+import sys
 import pygame
 import random
 
+from core.debug import print_tick
 from world.farm_grid import MAP_DATA, TILE_TYPES
 from world.node import Node
 from core.state import GameState
@@ -11,6 +13,8 @@ from entities.crop import Crop
 from simulation.season_manager import SeasonManager
 from simulation.event_manager import EventManager
 
+
+DEBUG_MODE = "--debug" in sys.argv
 
 # ── Layout ────────────────────────────────────────────────────────────────────
 CELDA_PX  = 12
@@ -94,16 +98,35 @@ EVENT_COLORS = {
 }
 
 GOAL_LABELS = {
-    "HARVEST":  "Cosechar",
-    "WATER":    "Regar",
-    "PLANT":    "Plantar",
-    "EXPLORE":  "Explorar",
-    "REST":     "Descansar",
-    "GO_HOME":  "Ir a casa",
-    None:       "—",
+    "HARVEST":  "Cosechando",
+    "WATER":    "Regando",
+    "PLANT":    "Plantando",
+    "EXPLORE":  "Explorando el campo",
+    "REST":     "Descansando",
+    "GO_HOME":  "Volviendo a casa",
+    None:       "Pensando...",
 }
 
-CROP_PHASE_LABELS = {0: "Semilla", 1: "Creciendo", 2: "Lista"}
+ENERGY_LABELS = {
+    # (min_pct, label, color_key)
+    0.75: ("Alta",     "energy_hi"),
+    0.40: ("Normal",   "energy_mid"),
+    0.20: ("Baja",     "energy_mid"),
+    0.00: ("Muy baja", "energy_lo"),
+}
+
+EVENT_LABELS = {
+    "sequia":             "Sequía",
+    "tormenta":           "Tormenta",
+    "nevada":             "Nevada",
+    "inundacion":         "Inundación",
+    "plaga":              "Plaga",
+    "gran_deslave":       "Deslave",
+    "nevada_paralizante": "Nevada intensa",
+    "plaga_de_insectos":  "Plaga de insectos",
+}
+
+CROP_PHASE_LABELS = {0: "Recién plantadas", 1: "Creciendo", 2: "Listas para cosechar"}
 CROP_PHASE_COLORS = {0: (180, 140, 20), 1: (80, 200, 80), 2: (255, 80, 80)}
 
 
@@ -240,124 +263,103 @@ def dibujar_grid(pantalla, state, agente, celda_px, particulas):
 
 
 # ── Dibujo del HUD ────────────────────────────────────────────────────────────
+def _energy_label(pct):
+    """Devuelve (texto, color_key) según el porcentaje de energía."""
+    if pct >= 0.75:
+        return "Alta",     "energy_hi"
+    if pct >= 0.40:
+        return "Normal",   "energy_mid"
+    if pct >= 0.20:
+        return "Baja",     "energy_mid"
+    return "Muy baja", "energy_lo"
+
+
 def dibujar_hud(pantalla, state, agente, fuentes):
-    px   = GRID_W + 10     # x inicio panel
-    pw   = HUD_W - 20      # ancho útil
-    pad  = 10              # padding interno cards
+    px  = GRID_W + 10
+    pw  = HUD_W - 20
+    pad = 10
 
     # Fondo panel
     pygame.draw.rect(pantalla, C["bg"], (GRID_W, 0, HUD_W, WINDOW_H))
     pygame.draw.line(pantalla, C["card_border"], (GRID_W, 0), (GRID_W, WINDOW_H), 1)
 
+    gen_num = agente.evolution.generation
+
     # ── Header ──────────────────────────────────────────────────────────────
     _card(pantalla, px, 10, pw, 36, radius=6)
     _label(pantalla, fuentes, "Smart Farm", px + pad, 18, C["txt_hi"], "md")
+    gen_txt = f"Gen. {gen_num}"
+    gen_w   = fuentes["xs"].size(gen_txt)[0]
+    _label(pantalla, fuentes, gen_txt, px + pw - pad - gen_w, 22, C["txt_dim"], "xs")
 
-    cy = 58  # cursor y
+    cy = 58
 
-    # ── Estación ─────────────────────────────────────────────────────────────
+    # ── Clima ────────────────────────────────────────────────────────────────
     season     = getattr(state, "season", "—")
     s_color    = SEASON_COLORS.get(season, C["txt_mid"])
-    _card(pantalla, px, cy, pw, 52, radius=6)
-    _section_title(pantalla, fuentes, "ESTACIÓN", px + pad, cy + pad, pw - pad * 2)
-    _label(pantalla, fuentes, season, px + pad, cy + 26, s_color, "sm")
-    # Indicador de día en la estación
-    day_in_season = getattr(state, "_season_mgr", None)
-    if day_in_season and hasattr(day_in_season, "days_passed"):
-        dp  = day_in_season.days_passed
-        dps = day_in_season.days_per_season
-        pct = dp / dps
-        _bar(pantalla, px + pad + 75, cy + 29, pw - pad * 2 - 75, 8,
-             pct, s_color, s_color)
-        _label(pantalla, fuentes, f"Día {dp}/{dps}", px + pw - pad - 52, cy + 28,
-               C["txt_dim"], "xs")
-    cy += 62
-
-    # ── Evento ───────────────────────────────────────────────────────────────
     event_name = state.active_effects.get("event_name", "")
-    evt_label  = event_name.replace("_", " ").capitalize() if event_name else "Despejado"
-    evt_color  = EVENT_COLORS.get(event_name, C["accent2"]) if event_name else C["txt_mid"]
-    _card(pantalla, px, cy, pw, 52, radius=6)
-    _section_title(pantalla, fuentes, "EVENTO", px + pad, cy + pad, pw - pad * 2)
-    dot_x = px + pad
-    dot_y = cy + 32
-    pygame.draw.circle(pantalla, evt_color, (dot_x + 4, dot_y), 4)
-    _label(pantalla, fuentes, evt_label, dot_x + 14, dot_y - 8, evt_color, "sm")
-    cy += 62
+    evt_label  = EVENT_LABELS.get(event_name, "Sin incidentes")
+    evt_color  = EVENT_COLORS.get(event_name, C["txt_mid"])
 
-    # ── Agente ───────────────────────────────────────────────────────────────
-    energy_pct = agente.energy / max(agente.max_energy, 1)
-    goal_str   = GOAL_LABELS.get(agente.goal, str(agente.goal) if agente.goal else "—")
-    _card(pantalla, px, cy, pw, 104, radius=6)
-    _section_title(pantalla, fuentes, "AGENTE", px + pad, cy + pad, pw - pad * 2)
-    # Pos + Goal
-    _label(pantalla, fuentes, f"Pos", px + pad, cy + 26, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, f"({agente.x}, {agente.y})", px + pad + 22, cy + 26, C["txt_hi"], "xs")
-    _label(pantalla, fuentes, f"Goal", px + pw // 2, cy + 26, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, goal_str, px + pw // 2 + 28, cy + 26, C["accent"], "xs")
-    # Estado
-    estado_txt = "Descansando" if agente.resting else "Activo"
-    estado_col = C["energy_mid"] if agente.resting else C["energy_hi"]
-    _label(pantalla, fuentes, estado_txt, px + pad, cy + 42, estado_col, "xs")
-    # Barra energía
-    _label(pantalla, fuentes, "Energía", px + pad, cy + 60, C["txt_dim"], "xs")
-    _bar(pantalla, px + pad + 50, cy + 60, pw - pad * 2 - 50, 10,
+    _card(pantalla, px, cy, pw, 72, radius=6)
+    _section_title(pantalla, fuentes, "CLIMA", px + pad, cy + pad, pw - pad * 2)
+
+    smgr = getattr(state, "_season_mgr", None)
+    if smgr and hasattr(smgr, "days_passed"):
+        dp, dps = smgr.days_passed, smgr.days_per_season
+        season_line = f"{season}  ·  día {dp} de {dps}"
+    else:
+        season_line = season
+    _label(pantalla, fuentes, season_line, px + pad, cy + 26, s_color, "sm")
+
+    if smgr:
+        _bar(pantalla, px + pad, cy + 42, pw - pad * 2, 6,
+             dp / dps, s_color, s_color)
+
+    dot_x, dot_y = px + pad + 4, cy + 57
+    pygame.draw.circle(pantalla, evt_color, (dot_x, dot_y), 3)
+    _label(pantalla, fuentes, evt_label, dot_x + 10, dot_y - 7, evt_color, "xs")
+    cy += 82
+
+    # ── El agente ─────────────────────────────────────────────────────────────
+    energy_pct   = agente.energy / max(agente.max_energy, 1)
+    elabel, ekey = _energy_label(energy_pct)
+    ecolor       = C[ekey]
+    goal_str     = GOAL_LABELS.get(agente.goal, "Pensando...")
+
+    _card(pantalla, px, cy, pw, 90, radius=6)
+    _section_title(pantalla, fuentes, "EL AGENTE", px + pad, cy + pad, pw - pad * 2)
+    _label(pantalla, fuentes, goal_str, px + pad, cy + 26, C["txt_hi"], "sm")
+
+    _label(pantalla, fuentes, "Energía", px + pad, cy + 46, C["txt_dim"], "xs")
+    _bar(pantalla, px + pad + 52, cy + 46, pw - pad * 2 - 80, 9,
          energy_pct, C["energy_hi"], C["energy_lo"], C["energy_mid"])
-    pct_txt = f"{int(energy_pct * 100)}%"
-    _label(pantalla, fuentes, pct_txt, px + pw - pad - 28, cy + 60, C["txt_mid"], "xs")
-    # Valor numérico energía
-    _label(pantalla, fuentes, f"{agente.energy:.0f} / {agente.max_energy:.0f}",
-           px + pad, cy + 78, C["txt_dim"], "xs")
-    cy += 114
+    _label(pantalla, fuentes, elabel, px + pw - pad - fuentes["xs"].size(elabel)[0], cy + 46,
+           ecolor, "xs")
 
-    # ── Genética ──────────────────────────────────────────────────────────────
-    g = agente.genes
-    gen_num = agente.evolution.generation
-    _card(pantalla, px, cy, pw, 110, radius=6)
-    _section_title(pantalla, fuentes, f"GENÉTICA  —  Gen {gen_num}", px + pad, cy + pad, pw - pad * 2)
-    stats = [
-        ("E.Max",  f"{g.energy_max:.0f}"),
-        ("Cons.",  f"{g.energy_consumption:.2f}"),
-        ("Rest.",  f"{g.rest_efficiency:.2f}"),
-        ("Expl.",  f"{g.exploration_rate:.2f}"),
-    ]
-    col_w = (pw - pad * 2) // 2
-    for i, (lbl, val) in enumerate(stats):
-        col = i % 2
-        row = i // 2
-        bx  = px + pad + col * col_w
-        by  = cy + 26 + row * 30
-        _label(pantalla, fuentes, lbl, bx, by, C["txt_dim"], "xs")
-        _label(pantalla, fuentes, val, bx + 32, by, C["txt_hi"], "xs")
-    cy += 120
+    cosechas = agente.life_stats.get("harvests", 0)
+    _label(pantalla, fuentes, f"Cosechas esta vida:  {cosechas}",
+           px + pad, cy + 68, C["txt_dim"], "xs")
+    cy += 100
 
-    # ── Cultivos ──────────────────────────────────────────────────────────────
+    # ── Los cultivos ──────────────────────────────────────────────────────────
     fase_counts = {0: 0, 1: 0, 2: 0}
     for crop in state.crops:
         fase_counts[crop.fase] = fase_counts.get(crop.fase, 0) + 1
     total = len(state.crops)
 
-    _card(pantalla, px, cy, pw, 90, radius=6)
-    _section_title(pantalla, fuentes, f"CULTIVOS  ({total} total)", px + pad, cy + pad, pw - pad * 2)
+    _card(pantalla, px, cy, pw, 86, radius=6)
+    _section_title(pantalla, fuentes, "CULTIVOS", px + pad, cy + pad, pw - pad * 2)
     for i, (fase, label) in enumerate(CROP_PHASE_LABELS.items()):
         bx  = px + pad
         by  = cy + 26 + i * 20
         cnt = fase_counts.get(fase, 0)
-        pygame.draw.circle(pantalla, CROP_PHASE_COLORS[fase], (bx + 4, by + 5), 4)
+        col = CROP_PHASE_COLORS[fase]
+        pygame.draw.circle(pantalla, col, (bx + 4, by + 5), 4)
         _label(pantalla, fuentes, label, bx + 14, by, C["txt_mid"], "xs")
-        _label(pantalla, fuentes, str(cnt), bx + 80, by, C["txt_hi"], "xs")
-        if total > 0:
-            _bar(pantalla, bx + 96, by + 2, pw - pad * 2 - 96, 7,
-                 cnt / total, CROP_PHASE_COLORS[fase], CROP_PHASE_COLORS[fase])
-    cy += 100
-
-    # ── Simulación ────────────────────────────────────────────────────────────
-    _card(pantalla, px, cy, pw, 52, radius=6)
-    _section_title(pantalla, fuentes, "SIMULACIÓN", px + pad, cy + pad, pw - pad * 2)
-    _label(pantalla, fuentes, "Tick", px + pad, cy + 26, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, str(state.tick), px + pad + 28, cy + 26, C["txt_hi"], "xs")
-    _label(pantalla, fuentes, "Vel.", px + pw // 2, cy + 26, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, "10 t/s", px + pw // 2 + 24, cy + 26, C["txt_mid"], "xs")
+        cnt_w = fuentes["xs"].size(str(cnt))[0]
+        _label(pantalla, fuentes, str(cnt), px + pw - pad - cnt_w, by, C["txt_hi"], "xs")
+    cy += 96
 
 
 # ── Función de dibujo principal ───────────────────────────────────────────────
@@ -366,19 +368,6 @@ def dibujar(pantalla, state, agente, celda_px, particulas, fuentes):
     dibujar_grid(pantalla, state, agente, celda_px, particulas)
     dibujar_hud(pantalla, state, agente, fuentes)
     pygame.display.flip()
-
-
-def debug_print(state, agente):
-    print(f"--- Tick {state.tick} ---")
-    print(f"Pos: ({agente.x}, {agente.y}) | Energía: {agente.energy:.1f} | Resting: {agente.resting}")
-    print(f"Goal: {agente.goal} | Path: {len(agente.current_path)}")
-    if hasattr(agente, 'genes'):
-        g = agente.genes
-        print(f"Genes → emax:{g.energy_max:.1f} econs:{g.energy_consumption:.2f} "
-              f"rest:{g.rest_efficiency:.2f} expl:{g.exploration_rate:.2f}")
-    if state.active_effects:
-        print(f"Efectos activos: {state.active_effects}")
-    print()
 
 
 def main():
@@ -429,7 +418,8 @@ def main():
             if evento.type == pygame.QUIT:
                 ejecutando = False
         pipeline.run(state)
-        debug_print(state, agente)
+        if DEBUG_MODE:
+            print_tick(state, agente)
         dibujar(pantalla, state, agente, CELDA_PX, particulas, fuentes)
         clock.tick(10)
 
