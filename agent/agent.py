@@ -350,10 +350,13 @@ class Agent:
                 if crop.pos in self.memory["known_crops"]:
                     del self.memory["known_crops"][crop.pos]
                 return
-            state.farmer_inventory.append(("crop", crop.pos))
+            harvest_bonus = state.active_effects.get("harvest_bonus", 1)
+            valor = crop.valor * harvest_bonus
+            state.farmer_inventory.append(("crop", crop.pos, crop.tipo, valor))
             state.crops.remove(crop)
             self.life_stats["harvests"] += 1
-            print(f"[Agent] Cosechado {crop.pos} | inventario: {len(state.farmer_inventory)}")
+            self.life_stats["harvest_value"] = self.life_stats.get("harvest_value", 0) + valor
+            print(f"[Agent] Cosechado {crop.tipo} en {crop.pos} (valor={valor})")
             if crop.pos in self.memory["known_crops"]:
                 del self.memory["known_crops"][crop.pos]
 
