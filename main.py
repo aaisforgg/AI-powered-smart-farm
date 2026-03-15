@@ -6,9 +6,10 @@ from world.farm_grid import MAP_DATA, TILE_TYPES
 from world.node import Node
 from core.state import GameState
 from core.pipeline import Pipeline
-from core.steps import tick_agent, tick_crops, tick_season, tick_events, tick_counter
+from core.steps import tick_agent, tick_crops, tick_animals, tick_season, tick_events, tick_counter
 from agent.agent import Agent
 from entities.crop import Crop
+from entities.animal import Animal
 from simulation.season_manager import SeasonManager
 from simulation.event_manager import EventManager
 from rendering import render_frame
@@ -70,6 +71,20 @@ def spawn_crops(grid, count=None):
     return crops
 
 
+def spawn_animals(grid, count=3):
+    pasto_tiles = [
+        (tile.x, tile.y)
+        for fila in grid
+        for tile in fila
+        if tile.type_name == "pasto" and tile.walkable
+    ]
+    if not pasto_tiles:
+        return []
+    count = min(count, len(pasto_tiles))
+    positions = random.sample(pasto_tiles, count)
+    return [Animal(x, y) for x, y in positions]
+
+
 def main():
     pygame.init()
     pantalla = pygame.display.set_mode((WINDOW_W, WINDOW_H))
@@ -89,7 +104,8 @@ def main():
     agente        = Agent(spawn_x, spawn_y, crop_factory=spawn_crops)
     agente.debug  = DEBUG_MODE
     crops         = spawn_crops(mundo)
-    event_mgr  = EventManager()
+    animals       = spawn_animals(mundo)
+    event_mgr     = EventManager()
 
     for fila in mundo:
         for nodo in fila:
@@ -102,6 +118,7 @@ def main():
         farmer_pos=(agente.x, agente.y),
         grid=mundo,
         crops=crops,
+        animals=animals,
         season=season_mgr.current_season,
         _agent_ref=agente,
         _season_mgr=season_mgr,
@@ -111,6 +128,7 @@ def main():
     pipeline = Pipeline(
         tick_agent,
         tick_crops,
+        tick_animals,
         tick_season,
         tick_events,
         tick_counter,
@@ -156,9 +174,11 @@ def main():
                             if nodo.type_name == "casa":
                                 agente.memory["home_tiles"].add((nodo.x, nodo.y))
                     state.crops = crops
+                    state.animals = spawn_animals(mundo)
                     state._agent_ref = agente
                     state.tick = 0
                     state.generation = 0
+                    state.score = 0
                     state.active_effects.clear()
                     print("[Main] Reset completo")
 

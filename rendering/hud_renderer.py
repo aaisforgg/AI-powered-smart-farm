@@ -71,9 +71,12 @@ def dibujar_hud(pantalla, state, agente, fuentes):
     _card(pantalla, hx, hy, hw, hh, radius=8)
     _label(pantalla, fuentes, "AI SMART FARM",       hx + pad, hy + 12, C["accent"],  "md")
     _label(pantalla, fuentes, "Simulación autónoma",  hx + pad, hy + 30, C["txt_dim"], "xs")
-    gen_txt = f"Gen. {gen_num}"
-    gen_w   = fuentes["xs"].size(gen_txt)[0]
+    gen_txt   = f"Gen. {gen_num}"
+    gen_w     = fuentes["xs"].size(gen_txt)[0]
     _label(pantalla, fuentes, gen_txt, hx + hw - pad - gen_w, hy + 16, C["txt_dim"], "xs")
+    score_txt = f"Score: {state.score}"
+    score_w   = fuentes["xs"].size(score_txt)[0]
+    _label(pantalla, fuentes, score_txt, hx + hw - pad - score_w, hy + 30, C["accent2"], "xs")
 
     # ── Estación ──────────────────────────────────────────────────────────
     sx, sy, sw, sh = layout.next_section(_H_SEASON)

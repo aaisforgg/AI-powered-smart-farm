@@ -5,7 +5,9 @@ class GoalManager:
 
     PRIORITY = {
         "HARVEST": 1,
+        "COLLECT": 1,
         "WATER":   2,
+        "FEED":    2,
         "PLANT":   3,
     }
 
@@ -14,44 +16,46 @@ class GoalManager:
         self.last_reject_reason = "—"
 
     def choose_goal(self, state, agent):
-        crops = list(agent.memory["known_crops"].values())
+        crops   = list(agent.memory["known_crops"].values())
+        animals = [a for a in state.animals
+                   if abs(a.x - agent.x) + abs(a.y - agent.y)
+                   <= getattr(agent.genes, "vision_radius", 10)]
 
-        if not crops:
+        if not crops and not animals:
             self.last_reject_reason = "no_crops_known"
             return None
 
-        # Solo considerar las últimas 2 acciones para evitar bloquear candidatos válidos
-        recent_actions = set(list(agent.memory["last_actions"])[-2:])
-
-        candidates = []
+        recent_actions  = set(list(agent.memory["last_actions"])[-2:])
+        candidates      = []
         had_valid_strategy = False
 
+        # — Crops —
         for crop in crops:
-            # Delegar a StrategyManager (fuente única de verdad)
             strategy = self._strategy.choose_strategy(state, crop)
-
             if strategy is None:
                 continue
-
             had_valid_strategy = True
-
-            # HARVEST y PLANT nunca se bloquean (son acciones únicas por crop)
-            # WATER urgente tampoco se bloquea
             is_urgent_water = strategy == "WATER" and crop.humedad < 30
-            if strategy not in ("HARVEST", "PLANT") and not is_urgent_water and (strategy, crop.pos) in recent_actions:
+            if strategy not in ("HARVEST", "PLANT") and not is_urgent_water \
+                    and (strategy, crop.pos) in recent_actions:
                 continue
-
             cx, cy = crop.pos
             dist = abs(cx - agent.x) + abs(cy - agent.y)
-            priority = self.PRIORITY.get(strategy, 99)
+            candidates.append((self.PRIORITY.get(strategy, 99), dist, crop, strategy))
 
-            candidates.append((priority, dist, crop, strategy))
+        # — Animales —
+        for animal in animals:
+            strategy = self._strategy.choose_animal_strategy(state, animal)
+            if strategy is None:
+                continue
+            had_valid_strategy = True
+            if (strategy, animal.pos) in recent_actions:
+                continue
+            dist = abs(animal.x - agent.x) + abs(animal.y - agent.y)
+            candidates.append((self.PRIORITY.get(strategy, 99), dist, animal, strategy))
 
         if not candidates:
-            if not had_valid_strategy:
-                self.last_reject_reason = "no_candidates"
-            else:
-                self.last_reject_reason = "all_blocked_by_recent"
+            self.last_reject_reason = "all_blocked_by_recent" if had_valid_strategy else "no_candidates"
             return None
 
         candidates.sort(key=lambda c: (c[0], c[1]))

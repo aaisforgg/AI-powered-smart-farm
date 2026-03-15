@@ -63,6 +63,19 @@ def dibujar_grid(pantalla, state, agente, celda_px, particulas, assets=None, deb
             pygame.draw.rect(pantalla, color,
                 (cx * celda_px + 2, cy * celda_px + 2, celda_px - 4, celda_px - 4))
 
+    # — Animales —
+    for animal in state.animals:
+        ax_a = animal.x * celda_px + celda_px // 2
+        ay_a = animal.y * celda_px + celda_px // 2
+        if animal.producto_listo:
+            a_color = (255, 215, 0)    # dorado — tiene producto listo
+        elif animal.hambre >= 50:
+            a_color = (255, 100, 100)  # rojo — hambriento
+        else:
+            a_color = (200, 180, 150)  # beige — normal
+        pygame.draw.circle(pantalla, a_color, (ax_a, ay_a), celda_px // 3)
+        pygame.draw.circle(pantalla, (30, 30, 30), (ax_a, ay_a), 1)
+
     # — Path del agente — gradiente cian (cerca) → amarillo (lejos) —
     if agente.current_path:
         path_list = list(agente.current_path)
