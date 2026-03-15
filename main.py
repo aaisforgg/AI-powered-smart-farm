@@ -96,7 +96,7 @@ def main():
             if nodo.type_name == "casa":
                 agente.memory["home_tiles"].add((nodo.x, nodo.y))
 
-    season_mgr = SeasonManager(days_per_season=400)
+    season_mgr = SeasonManager()
 
     state = GameState(
         farmer_pos=(agente.x, agente.y),

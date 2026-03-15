@@ -41,6 +41,7 @@ class Agent:
         self.energy_threshold = self.genes.energy_max * 0.15
         self.energy_recovery = 4.0
         self.resting = False
+        self.rest_ticks = 0
 
         self.evolution = EvolutionEngine()
 
@@ -130,13 +131,15 @@ class Agent:
         if self.life_stats["energy_on_rest"] is None:
             self.life_stats["energy_on_rest"] = self.energy
 
-        self.energy += self.genes.rest_efficiency
-        print(f"[Agent] Descansando... energia={self.energy:.1f}")
+        self.energy = min(self.max_energy, self.energy + self.genes.rest_efficiency)
+        self.rest_ticks += 1
+        print(f"[Agent] Descansando... dia={self.rest_ticks}/3 energia={self.energy:.1f}")
 
-        if self.energy >= self.max_energy:
-            self.energy = self.max_energy
+        if self.rest_ticks >= 3 or self.energy >= self.max_energy:
+            self.energy = min(self.energy, self.max_energy)
             self.resting = False
-            print("[Agent] Energia completa. Volviendo al trabajo")
+            self.rest_ticks = 0
+            print("[Agent] Descanso terminado. Volviendo al trabajo")
 
             self.evolution.end_life(self)
             print(f"[Agent] Generación {self.evolution.generation} | "
@@ -437,6 +440,7 @@ class Agent:
         self.current_path = deque()
         self.needs_replan = False
         self.resting = False
+        self.rest_ticks = 0
 
         self.memory = {
             "visited_tiles":  set(),
