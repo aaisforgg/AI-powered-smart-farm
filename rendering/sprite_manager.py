@@ -65,5 +65,17 @@ class SpriteManager:
         return sprite, offset, offset
 
     def _determine_action(self, agent):
-        """Lee el estado visual del agente (escrito por agent.py cada tick)."""
-        return getattr(agent, "visual_action", "stationary")
+        action = getattr(agent, "visual_action", "stationary")
+        ticks  = getattr(agent, "visual_action_ticks", 0)
+
+        TIMED_ACTIONS = {"watering", "collecting", "planting"}
+        if action in TIMED_ACTIONS and ticks > 0:
+            return action
+
+        if getattr(agent, "resting", False):
+            return "stationary"
+
+        if agent.current_path:
+            return "running" if len(agent.current_path) > 12 else "walking"
+
+        return "stationary"
