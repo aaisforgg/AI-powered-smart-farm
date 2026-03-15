@@ -2,7 +2,7 @@ import pygame
 
 from rendering.theme import (
     COLORES, CROP_COLORS, SEASON_TINTS, EVENT_TINTS,
-    GRID_W, GRID_H,
+    GRID_W, GRID_H, CELDA_PX,
 )
 
 
@@ -46,7 +46,7 @@ def dibujar_grid(pantalla, state, agente, celda_px, particulas, assets=None, deb
     if debug_visual and agente.memory.get("visited_tiles"):
         dbg_surf = pygame.Surface((GRID_W, GRID_H), pygame.SRCALPHA)
         for vx, vy in agente.memory["visited_tiles"]:
-            pygame.draw.rect(dbg_surf, (255, 255, 100, 30),
+            pygame.draw.rect(dbg_surf, (255, 230, 40, 90),
                              (vx * celda_px, vy * celda_px, celda_px, celda_px))
         pantalla.blit(dbg_surf, (0, 0))
 
@@ -105,5 +105,41 @@ def dibujar_grid(pantalla, state, agente, celda_px, particulas, assets=None, deb
         for p in particulas:
             p.caer()
             pygame.draw.line(pantalla, p_color, (p.x, p.y), (p.x, p.y + 3), 1)
+
+    # — Controles (esquina inferior izquierda) —
+    keys = [
+        ("P", "Pausa"),
+        ("D", "Debug"),
+        ("+/-", "Vel"),
+        ("R", "Reset"),
+    ]
+    item_w  = 72
+    item_h  = 16
+    margin  = 8
+    total_w = len(keys) * item_w + (len(keys) - 1) * 4
+    bx      = margin
+    by      = GRID_H - item_h - margin
+
+    # Fondo negro semitransparente detrás de todos los ítems
+    bg = pygame.Surface((total_w + 8, item_h + 6), pygame.SRCALPHA)
+    bg.fill((0, 0, 0, 160))
+    pantalla.blit(bg, (bx - 4, by - 3))
+
+    font = pygame.font.SysFont("Segoe UI", 10, bold=False)
+    font_key = pygame.font.SysFont("Segoe UI", 10, bold=True)
+    x = bx
+    for key, label in keys:
+        # Fondo de tecla negro sólido con borde blanco
+        key_w = font_key.size(key)[0] + 6
+        key_surf = pygame.Surface((key_w, item_h), pygame.SRCALPHA)
+        key_surf.fill((20, 20, 20, 230))
+        pygame.draw.rect(key_surf, (200, 200, 200, 200), (0, 0, key_w, item_h), 1)
+        pantalla.blit(key_surf, (x, by))
+        key_txt = font_key.render(key, True, (240, 240, 240))
+        pantalla.blit(key_txt, (x + 3, by + 3))
+
+        lbl_txt = font.render(label, True, (200, 200, 200))
+        pantalla.blit(lbl_txt, (x + key_w + 3, by + 3))
+        x += item_w
 
     pantalla.set_clip(None)
