@@ -23,6 +23,9 @@ class Agent:
 
         self.dir = (0, 0)
 
+        self.visual_action = "stationary"
+        self.visual_action_ticks = 0
+
         self.goal = None
         self.strategy = None
 
@@ -77,6 +80,12 @@ class Agent:
     def update(self, state):
         tile = state.grid[self.y][self.x]
 
+        # Decrementar timer visual
+        if self.visual_action_ticks > 0:
+            self.visual_action_ticks -= 1
+            if self.visual_action_ticks == 0:
+                self.visual_action = "stationary"
+
         # DESCANSO EN CASA
         if self._handle_resting(state, tile):
             return
@@ -127,6 +136,9 @@ class Agent:
         """Gestiona el descanso en casa. Retorna True si el agente está descansando."""
         if not (self.resting and tile.type_name == "casa"):
             return False
+
+        self.visual_action = "stationary"
+        self.visual_action_ticks = 0
 
         # Registrar energía al inicio del descanso
         if self.life_stats["energy_on_rest"] is None:
@@ -268,6 +280,12 @@ class Agent:
         self.movement.follow_path(self)
         self.life_stats["steps"] += 1
 
+        if self.visual_action_ticks == 0:
+            if self.current_path and len(self.current_path) > 15:
+                self.visual_action = "running"
+            elif self.current_path:
+                self.visual_action = "walking"
+
         tile = state.grid[self.y][self.x]
 
         move_cost = tile.cost * self.genes.energy_consumption
@@ -310,6 +328,8 @@ class Agent:
                 return
 
         self.movement.explore(self, state.grid)
+        if self.visual_action_ticks == 0:
+            self.visual_action = "walking"
 
     # ── ESTRATEGIA ──────────────────────────────────────────────────────────
 
@@ -357,9 +377,11 @@ class Agent:
             print(f"[EXECUTE] strategy={self.strategy} en pos={goal.pos} dist={d}")
 
         if self.strategy == "WATER":
+            self._set_visual_action("watering", 3)
             goal.humedad = min(100.0, goal.humedad + self.genes.water_efficiency)
 
         elif self.strategy == "PLANT":
+            self._set_visual_action("planting", 3)
             goal.fase = 1
 
         elif self.strategy == "HARVEST":
@@ -367,6 +389,7 @@ class Agent:
                 if goal.pos in self.memory["known_crops"]:
                     del self.memory["known_crops"][goal.pos]
                 return
+            self._set_visual_action("collecting", 3)
             harvest_bonus = state.active_effects.get("harvest_bonus", 1)
             valor = goal.valor * harvest_bonus
             state.farmer_inventory.append(("crop", goal.pos, goal.tipo, valor))
@@ -379,10 +402,12 @@ class Agent:
                 del self.memory["known_crops"][goal.pos]
 
         elif self.strategy == "FEED":
+            self._set_visual_action("collecting", 3)
             goal.alimentar()
             print(f"[Agent] Alimentado {goal.especie} en {goal.pos}")
 
         elif self.strategy == "COLLECT":
+            self._set_visual_action("collecting", 3)
             producto = goal.recoger_producto()
             if producto:
                 nombre, valor = producto
@@ -487,6 +512,8 @@ class Agent:
         self.resting = False
         self.rest_ticks = 0
         self._rest_start_energy = 0.0
+        self.visual_action = "stationary"
+        self.visual_action_ticks = 0
 
         self.memory = {
             "visited_tiles":  set(),
@@ -508,6 +535,11 @@ class Agent:
             state.crops = self._crop_factory(state.grid)
         state.farmer_inventory = []
         state.generation = self.evolution.generation
+
+    def _set_visual_action(self, action, duration=3):
+        """Establece una acción visual temporal que persiste por N ticks."""
+        self.visual_action = action
+        self.visual_action_ticks = duration
 
     def _reset_goal(self):
         self.goal = None

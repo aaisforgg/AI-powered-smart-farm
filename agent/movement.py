@@ -12,6 +12,7 @@ class Movement:
         manhattan = abs(nx - agent.x) + abs(ny - agent.y)
 
         if manhattan == 1:
+            agent.dir = (nx - agent.x, ny - agent.y)
             agent.x = nx
             agent.y = ny
         elif manhattan == 0:
