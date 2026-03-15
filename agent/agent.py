@@ -4,6 +4,7 @@ import random
 
 from agent.strategies import StrategyManager
 from core import state
+from core.debug import debug_tick
 from entities import crop
 from .decision import DecisionSystem
 from .movement import Movement
@@ -37,11 +38,13 @@ class Agent:
 
         self.energy = self.genes.energy_max
         self.max_energy = self.genes.energy_max
-        self.energy_threshold = 25.0
+        self.energy_threshold = 10.0
         self.energy_recovery = 4.0
         self.resting = False
 
         self.evolution = EvolutionEngine()
+
+        self.debug = False
 
         self.life_stats = {
             "harvests":       0,
@@ -73,9 +76,24 @@ class Agent:
     def update(self, state):
         tile = state.grid[self.y][self.x]
 
+        # DESCANSO EN CASA
         if self._handle_resting(state, tile):
             return
 
+        # Si resting=True pero no estamos en casa, ir a casa y nada más
+        if self.resting:
+            if self.current_path:
+                self._follow_current_path(state)
+            else:
+                if self.memory["home_tiles"]:
+                    hx, hy = next(iter(self.memory["home_tiles"]))
+                    path = self.pathfinder.find_path(self.x, self.y, hx, hy, state.grid)
+                    if path:
+                        path = self._centralize_path(path, state.grid)
+                        self.current_path = deque(path[1:])
+            return
+
+        # MEMORIA
         self._update_memory(state, tile)
         self._sync_known_crops(state)
 
@@ -98,6 +116,9 @@ class Agent:
             return
 
         self._explore_or_wander(state)
+
+        if self.debug:
+            debug_tick(state, self)
 
     # ── SUB-MÉTODOS DE update() ─────────────────────────────────────────────
 
@@ -169,15 +190,14 @@ class Agent:
         return True
 
     def _handle_low_energy(self, state):
-        """Gestiona energía baja: ir a casa o explorar buscándola. Retorna True si actuó."""
         if self.energy > self.energy_threshold or self.resting:
             return False
 
         if self.memory["home_tiles"]:
             hx, hy = next(iter(self.memory["home_tiles"]))
             print("[Agent] Energia baja → volviendo a casa")
-            self.goal = None
-            self.strategy = None
+            self.goal = None        # ← limpiar goal
+            self.strategy = None    # ← limpiar strategy
             self.current_path.clear()
             path = self.pathfinder.find_path(self.x, self.y, hx, hy, state.grid)
             if path:
@@ -185,11 +205,8 @@ class Agent:
                 self.current_path = deque(path[1:])
                 self.resting = True
         else:
-            # Casa desconocida: explorar para encontrarla
-            self.goal = None
-            self.strategy = None
-            self.current_path.clear()
-            self.movement.explore(self, state.grid)
+            self.energy = min(self.energy + self.genes.rest_efficiency, self.max_energy)
+            print("[Agent] Sin casa conocida — recuperando energía lentamente")
 
         return True
 
@@ -252,9 +269,15 @@ class Agent:
             gx, gy = self.goal.pos
             dist = abs(self.x - gx) + abs(self.y - gy)
             print(f"[Agent] Llegué al final del path. Pos=({self.x},{self.y}) Goal={self.goal.pos} dist={dist}")
+            if self.debug:
+                print(f"[PATH_END] llegué a ({self.x},{self.y}), goal en {self.goal.pos}, dist={dist}")
             if dist <= 1:
                 self._execute_strategy(state)
                 self._reset_goal()
+            else:
+                # Path agotado pero no llegamos al goal — replanificar
+                print(f"[Agent] Path exhausto con dist={dist} > 1, forzando replan")
+                self.needs_replan = True
 
         return True
 
@@ -296,6 +319,9 @@ class Agent:
 
         print(f"[Agent] Ejecutando '{self.strategy}' en {crop.pos} | "
               f"humedad={crop.humedad:.1f} fase={crop.fase}")
+        if self.debug:
+            d = abs(self.x - crop.x) + abs(self.y - crop.y)
+            print(f"[EXECUTE] strategy={self.strategy} en pos={crop.pos} dist={d}")
 
         if self.strategy == "WATER":
             crop.humedad = min(100.0, crop.humedad + 50.0)
@@ -395,8 +421,13 @@ class Agent:
     # ── CICLO DE VIDA ───────────────────────────────────────────────────────
 
     def _reset_for_new_life(self, state):
-        self.x = self._spawn_x
-        self.y = self._spawn_y
+        if self.memory["home_tiles"]:
+            hx, hy = next(iter(self.memory["home_tiles"]))
+            self.x = hx
+            self.y = hy
+        else:
+            self.x = self._spawn_x
+            self.y = self._spawn_y
 
         self.goal = None
         self.strategy = None
@@ -414,8 +445,14 @@ class Agent:
             "last_actions":   deque(maxlen=10)
         }
 
+        # Reinyectar casas — el agente ya las conoce de la vida anterior
+        for fila in state.grid:
+            for nodo in fila:
+                if nodo.type_name == "casa":
+                    self.memory["home_tiles"].add((nodo.x, nodo.y))
+
         if self._crop_factory:
-            state.crops = self._crop_factory()
+            state.crops = self._crop_factory(state.grid)
         state.farmer_inventory = []
         state.generation = self.evolution.generation
 

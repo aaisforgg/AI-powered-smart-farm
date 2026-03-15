@@ -32,25 +32,58 @@ def cargar_mapa_logico():
 
 
 def posicion_random_valida(grid):
-    tiles_prohibidos = {"agua", "acantilado", "cultivo", "puerta"}
-    alto  = len(grid)
-    ancho = len(grid[0])
-    while True:
-        x = random.randint(0, ancho - 1)
-        y = random.randint(0, alto - 1)
+    tiles_prohibidos = {"agua", "acantilado", "cultivo", "puerta", "edificio"}
+    # Zona central del mapa donde hay pasto y cultivos accesibles
+    for _ in range(1000):
+        x = random.randint(20, 60)
+        y = random.randint(20, 55)
         tile = grid[y][x]
         if tile.type_name not in tiles_prohibidos and tile.walkable:
             return x, y
+    return 35, 40 
 
 
-def spawn_crops():
-    return [
-        Crop(50, 40),
-        Crop(55, 42),
-        Crop(22, 45),
-        Crop(25, 50),
-        Crop(35, 45),
+def spawn_crops(grid, count=None):
+    """Genera cultivos en posiciones aleatorias de tiles tipo 'cultivo'.
+
+    Distribución de fases:
+      30% fase 0 (semilla)   humedad 80-100
+      40% fase 1 (creciendo) humedad 40-80
+      30% fase 2 (listo)     humedad 20-60
+    """
+    if count is None:
+        count = random.randint(8, 12)
+
+    cultivo_tiles = [
+        (tile.x, tile.y)
+        for fila in grid
+        for tile in fila
+        if tile.type_name == "cultivo"
     ]
+
+    if not cultivo_tiles:
+        print("[WARN] spawn_crops: no hay tiles de tipo 'cultivo' en el mapa")
+        return []
+
+    count = min(count, len(cultivo_tiles))
+    positions = random.sample(cultivo_tiles, count)
+
+    crops = []
+    for x, y in positions:
+        c = Crop(x, y)
+        r = random.random()
+        if r < 0.30:
+            c.fase    = 0
+            c.humedad = random.uniform(80, 100)
+        elif r < 0.70:
+            c.fase    = 1
+            c.humedad = random.uniform(40, 80)
+        else:
+            c.fase    = 2
+            c.humedad = random.uniform(20, 60)
+        crops.append(c)
+
+    return crops
 
 
 def main():
@@ -64,11 +97,22 @@ def main():
     mundo = cargar_mapa_logico()
     spawn_x, spawn_y = posicion_random_valida(mundo)
     print(f"Spawn del agente: ({spawn_x}, {spawn_y})")
+    assert mundo[spawn_y][spawn_x].walkable, (
+        f"[ERROR] Spawn en tile no caminable: ({spawn_x}, {spawn_y}) "
+        f"tipo='{mundo[spawn_y][spawn_x].type_name}'"
+    )
 
-    agente     = Agent(spawn_x, spawn_y, crop_factory=spawn_crops)
-    crops      = spawn_crops()
-    season_mgr = SeasonManager(days_per_season=30)
+    agente        = Agent(spawn_x, spawn_y, crop_factory=spawn_crops)
+    agente.debug  = DEBUG_MODE
+    crops         = spawn_crops(mundo)
     event_mgr  = EventManager()
+
+    for fila in mundo:
+        for nodo in fila:
+            if nodo.type_name == "casa":
+                agente.memory["home_tiles"].add((nodo.x, nodo.y))
+
+    season_mgr = SeasonManager(days_per_season=120)
 
     state = GameState(
         farmer_pos=(agente.x, agente.y),
@@ -103,6 +147,12 @@ def main():
             if evento.type == pygame.QUIT:
                 ejecutando = False
         pipeline.run(state)
+
+        if len(state.crops) < 3:
+            nuevos = spawn_crops(state.grid, count=5)
+            state.crops.extend(nuevos)
+            print(f"[Main] Repoblando cultivos: +{len(nuevos)} → total {len(state.crops)}")
+
         render_frame(pantalla, state, agente, CELDA_PX, particulas, fuentes, assets)
         clock.tick(10)
 

@@ -9,8 +9,8 @@ from rendering.helpers import _card, _label, _bar, _section_title
 
 
 GENE_RANGES = {
-    "energy_max":         (40,   200),
-    "energy_consumption": (0.1,  2.0),
+    "energy_max":         (150,  350),
+    "energy_consumption": (0.1,  1.5),
     "rest_efficiency":    (0.5,  8.0),
     "exploration_rate":   (0.01, 1.0),
 }
@@ -83,7 +83,7 @@ def dibujar_hud(pantalla, state, agente, fuentes):
     _label(pantalla, fuentes, evt_label, ex + pad + 18, ey + 34, evt_color, "sm")
 
     # ── Agente ────────────────────────────────────────────────────────────
-    ax, ay, aw, ah = layout.next_section(148)
+    ax, ay, aw, ah = layout.next_section(164)
     energy_pct  = agente.energy / max(agente.max_energy, 1)
 
     if agente.resting:
@@ -142,6 +142,12 @@ def dibujar_hud(pantalla, state, agente, fuentes):
 
     # Fila 6: Cosechas
     _label(pantalla, fuentes, f"Cosechas: {cosechas}", ax + pad, ay + 110, C["txt_dim"], "xs")
+
+    # Fila 7: Inventario
+    inv_items = len(state.farmer_inventory)
+    inv_str   = f"{inv_items} cultivos" if inv_items > 0 else "vacío"
+    _label(pantalla, fuentes, "Inv.",    ax + pad,        ay + 126, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, inv_str,   ax + pad + 30,   ay + 126, C["accent2"], "xs")
 
     # ── Genética ──────────────────────────────────────────────────────────
     gx, gy, gw, gh = layout.next_section(120)
@@ -218,7 +224,7 @@ def dibujar_hud(pantalla, state, agente, fuentes):
     smx, smy, smw, smh = layout.next_section(66)
     visited = len(agente.memory.get("visited_tiles", set()))
     total_tiles = 80 * 65
-    inventory   = len(agente.inventory) if hasattr(agente, "inventory") else 0
+    inventory   = len(state.farmer_inventory)
 
     _card(pantalla, smx, smy, smw, smh, radius=6)
     _section_title(pantalla, fuentes, "SIMULACIÓN", smx + pad, smy + pad, smw - pad * 2)
