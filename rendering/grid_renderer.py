@@ -98,13 +98,6 @@ def dibujar_grid(pantalla, state, agente, celda_px, particulas, assets=None, deb
             prev = (px, py)
         pantalla.blit(path_surf, (0, 0))
 
-    # — Marcador del goal —
-    if agente.goal and hasattr(agente.goal, 'pos'):
-        gx_px, gy_px = agente.goal.pos
-        goal_surf = pygame.Surface((celda_px + 4, celda_px + 4), pygame.SRCALPHA)
-        pygame.draw.rect(goal_surf, (255, 255, 0, 120), (0, 0, celda_px + 4, celda_px + 4), 2)
-        pantalla.blit(goal_surf, (gx_px * celda_px - 2, gy_px * celda_px - 2))
-
     # — Agente —
     if assets and assets.sprites._loaded:
         sprite, off_x, off_y = assets.sprites.get_agent_sprite(agente)
