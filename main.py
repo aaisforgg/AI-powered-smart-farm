@@ -60,33 +60,26 @@ EVENT_TINTS = {
 
 # ── Paleta HUD ────────────────────────────────────────────────────────────────
 C = {
-    "bg":           ( 10,  12,  28),
-    "panel":        ( 18,  22,  48),
-    "card":         ( 26,  32,  64),
-    "card_border":  ( 48,  58, 110),
-    "accent":       ( 80, 160, 255),
-    "accent2":      (120, 220, 160),
-    "divider":      ( 38,  46,  90),
-    "txt_hi":       (230, 235, 255),
-    "txt_mid":      (155, 165, 210),
-    "txt_dim":      ( 80,  92, 148),
-    "energy_hi":    ( 80, 220, 120),
-    "energy_mid":   (240, 200,  60),
-    "energy_lo":    (220,  70,  60),
+    "bg":           ( 28,  24,  20),
+    "panel":        ( 36,  31,  26),
+    "card":         ( 44,  38,  32),
+    "card_border":  ( 68,  60,  50),
+    "accent":       (200, 175, 110),
+    "accent2":      (140, 190, 120),
+    "divider":      ( 60,  54,  46),
+    "txt_hi":       (220, 215, 200),
+    "txt_mid":      (155, 148, 130),
+    "txt_dim":      ( 95,  90,  78),
+    "energy_hi":    (120, 190,  80),
+    "energy_mid":   (200, 170,  50),
+    "energy_lo":    (190,  70,  50),
 }
 
 SEASON_COLORS = {
-    "Primavera": ( 80, 220, 100),
-    "Verano":    (255, 200,  50),
-    "Otoño":     (220, 120,  40),
-    "Invierno":  (150, 200, 255),
-}
-
-SEASON_ICONS = {
-    "Primavera": "☀",
-    "Verano":    "🌞",
-    "Otoño":     "🍂",
-    "Invierno":  "❄",
+    "Primavera": (100, 190,  90),
+    "Verano":    (210, 170,  50),
+    "Otoño":     (200, 110,  40),
+    "Invierno":  (160, 190, 210),
 }
 
 EVENT_COLORS = {
@@ -228,17 +221,13 @@ def dibujar_grid(pantalla, state, agente, celda_px, particulas):
         pygame.draw.rect(pantalla, color,
             (cx * celda_px + 2, cy * celda_px + 2, celda_px - 4, celda_px - 4))
 
-    # Agente: glow + círculo principal
+    # Agente
     ax = agente.x * celda_px + celda_px // 2
     ay = agente.y * celda_px + celda_px // 2
     r  = celda_px // 2
-    glow_surf = pygame.Surface((r * 6, r * 6), pygame.SRCALPHA)
-    pygame.draw.circle(glow_surf, (80, 160, 255, 45), (r * 3, r * 3), r * 3)
-    pygame.draw.circle(glow_surf, (80, 160, 255, 70), (r * 3, r * 3), r * 2)
-    pantalla.blit(glow_surf, (ax - r * 3, ay - r * 3))
-    pygame.draw.circle(pantalla, (200, 220, 255), (ax, ay), r)
-    pygame.draw.circle(pantalla, ( 60, 130, 255), (ax, ay), r - 2)
-    pygame.draw.circle(pantalla, (180, 210, 255), (ax, ay), r // 2)
+    pygame.draw.circle(pantalla, (240, 235, 210), (ax, ay), r)
+    pygame.draw.circle(pantalla, (160, 100,  40), (ax, ay), r - 2)
+    pygame.draw.circle(pantalla, (240, 235, 210), (ax, ay), r // 3)
 
     # Partículas
     if season == "Invierno" or event_name in ("tormenta", "nevada", "nevada_paralizante"):
@@ -261,11 +250,10 @@ def dibujar_hud(pantalla, state, agente, fuentes):
     pygame.draw.line(pantalla, C["card_border"], (GRID_W, 0), (GRID_W, WINDOW_H), 1)
 
     # ── Header ──────────────────────────────────────────────────────────────
-    _card(pantalla, px, 10, pw, 44, radius=8)
-    _label(pantalla, fuentes, "AI SMART FARM", px + pad, 20, C["accent"], "md")
-    _label(pantalla, fuentes, "Simulación autonoma", px + pad, 36, C["txt_dim"], "xs")
+    _card(pantalla, px, 10, pw, 36, radius=6)
+    _label(pantalla, fuentes, "Smart Farm", px + pad, 18, C["txt_hi"], "md")
 
-    cy = 66  # cursor y
+    cy = 58  # cursor y
 
     # ── Estación ─────────────────────────────────────────────────────────────
     season     = getattr(state, "season", "—")
@@ -341,8 +329,6 @@ def dibujar_hud(pantalla, state, agente, fuentes):
         by  = cy + 26 + row * 30
         _label(pantalla, fuentes, lbl, bx, by, C["txt_dim"], "xs")
         _label(pantalla, fuentes, val, bx + 32, by, C["txt_hi"], "xs")
-        # mini barra relativa (visual de comparación)
-        _bar(pantalla, bx + 70, by + 2, col_w - 78, 7, 0.5, C["accent"], C["accent"], None)
     cy += 120
 
     # ── Cultivos ──────────────────────────────────────────────────────────────
