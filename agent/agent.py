@@ -377,11 +377,11 @@ class Agent:
             print(f"[EXECUTE] strategy={self.strategy} en pos={goal.pos} dist={d}")
 
         if self.strategy == "WATER":
-            self._set_visual_action("watering", 3)
+            self._set_visual_action("watering", 4)
             goal.humedad = min(100.0, goal.humedad + self.genes.water_efficiency)
 
         elif self.strategy == "PLANT":
-            self._set_visual_action("planting", 3)
+            self._set_visual_action("planting", 4)
             goal.fase = 1
 
         elif self.strategy == "HARVEST":
