@@ -3,10 +3,8 @@ from math import dist
 import random
 
 from agent.strategies import StrategyManager
-from core import state
 from core.constants import REST_TICKS_MAX
 from core.debug import debug_tick
-from entities import crop
 from .decision import DecisionSystem
 from .movement import Movement
 from pathfinding.astar import AStarPathfinder
