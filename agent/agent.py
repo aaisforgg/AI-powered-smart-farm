@@ -112,6 +112,27 @@ class Agent:
         for crop in state.crops:
             self.memory["known_crops"][crop.pos] = crop
 
+        # SI NO HAY CULTIVOS → IR A CASA ANTES DE EXPLORAR
+        if not self.memory["known_crops"] and state.farmer_inventory and not self.current_path:
+
+            if self.memory["home_tiles"]:
+
+                hx, hy = next(iter(self.memory["home_tiles"]))
+
+                print("[Agent] No hay cultivos → regresando a casa a descargar")
+
+                self.goal = None
+                self.strategy = None
+                self.current_path.clear()
+
+                path = self.pathfinder.find_path(self.x, self.y, hx, hy, state.grid)
+
+                if path:
+                    self.current_path = deque(path[1:])
+                    self.resting = True
+
+                return
+
         # ENERGIA BAJA → VOLVER A CASA
         if self.energy <= self.energy_threshold and not self.resting:
             if self.memory["home_tiles"]:
@@ -139,7 +160,6 @@ class Agent:
                 gx, gy = self.goal.pos
                 path = self.pathfinder.find_path(self.x, self.y, gx, gy, state.grid)
                 if path:
-                    path = self._centralize_path(path, state.grid)
                     self.current_path = deque(path[1:])
                     print(f"[Agent] Ruta calculada a {self.goal.pos} — {len(self.current_path)} pasos")
                 else:
@@ -160,7 +180,19 @@ class Agent:
             self.life_stats["steps"] += 1
 
             tile = state.grid[self.y][self.x]
-            self.energy -= tile.cost * self.genes.energy_consumption
+
+            # Costo base del tile × gen de consumo
+            move_cost = tile.cost * self.genes.energy_consumption
+
+            # Multiplicador por eventos globales (tormenta, nevada, etc.)
+            move_multiplier = state.active_effects.get("movement_cost_multiplier", 1.0)
+            move_cost *= move_multiplier
+
+            # Drain pasivo por eventos (tormenta eléctrica, etc.)
+            energy_drain = state.active_effects.get("energy_drain_per_tick", 0.0)
+
+            self.energy -= (move_cost + energy_drain)
+            
             if self.energy <= 0:
                 self.energy = 0
                 self.life_stats["starved"] = True
@@ -184,7 +216,6 @@ class Agent:
             path = self.pathfinder.find_path(self.x, self.y, tx, ty, state.grid)
 
             if path:
-                path = self._centralize_path(path, state.grid)
                 self.current_path = deque(path[1:])
                 return
 
@@ -195,19 +226,13 @@ class Agent:
             self.movement.explore(self, state.grid)
 
     def _execute_strategy(self, state):
-
-        if not self.goal:
+        """Ejecuta la acción planeada sobre el crop objetivo."""
+        if not self.goal or not self.strategy:
             return
 
         crop = self.goal
 
-        # Recalcular por si el estado del crop cambió desde que se planificó
-        from .strategies import StrategyManager
-        strategy = StrategyManager().choose_strategy(state, crop)
-    
-        if strategy is None:
-            return
-
+        # Registrar en memoria
         self.memory["episodes"].append({
             "pos": (self.x, self.y),
             "action": self.strategy,
@@ -215,7 +240,8 @@ class Agent:
         })
         self.memory["last_actions"].append((self.strategy, crop.pos))
 
-        print(f"[Agent] Ejecutando '{self.strategy}' en {crop.pos} | humedad={crop.humedad:.1f} fase={crop.fase}")
+        print(f"[Agent] Ejecutando '{self.strategy}' en {crop.pos} | "
+              f"humedad={crop.humedad:.1f} fase={crop.fase}")
 
         if self.strategy == "WATER":
             crop.humedad = min(100.0, crop.humedad + 50.0)
@@ -232,42 +258,42 @@ class Agent:
                 del self.memory["known_crops"][crop.pos]
 
     def _centralize_path(self, path, grid):
-
+        """Ajusta el path para alejarse de obstáculos SIN crear diagonales."""
         if not path:
             return path
 
         rows = len(grid)
         cols = len(grid[0])
 
-        new_path = []
+        # El primer nodo no se toca
+        new_path = [path[0]]
 
-        for x, y in path:
+        for i in range(1, len(path)):
+            x, y = path[i]
+            prev = new_path[-1]  # El nodo anterior YA ajustado
 
             best = (x, y)
             best_score = -999
 
-            # revisar vecinos posibles (incluyendo quedarse en el mismo)
-            for dx, dy in [(0,0),(1,0),(-1,0),(0,1),(0,-1)]:
-
+            # Probar el nodo original y sus vecinos cardinales
+            for dx, dy in [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)]:
                 nx = x + dx
                 ny = y + dy
 
                 if not (0 <= nx < cols and 0 <= ny < rows):
                     continue
-
                 if not grid[ny][nx].walkable:
                     continue
 
-                # calcular distancia a obstáculos cercanos
+                # CLAVE: el candidato DEBE ser adyacente cardinal al nodo previo
+                distancia_al_previo = abs(nx - prev[0]) + abs(ny - prev[1])
+                if distancia_al_previo != 1:
+                    continue
+
+                # Puntuar: preferir tiles lejos de obstáculos
                 score = 0
-
-                for ax, ay in [
-                    (-1,0),(1,0),(0,-1),(0,1),
-                    (-1,-1),(1,-1),(-1,1),(1,1)
-                ]:
-                    ox = nx + ax
-                    oy = ny + ay
-
+                for ax, ay in [(-1,0),(1,0),(0,-1),(0,1),(-1,-1),(1,-1),(-1,1),(1,1)]:
+                    ox, oy = nx + ax, ny + ay
                     if 0 <= ox < cols and 0 <= oy < rows:
                         if not grid[oy][ox].walkable:
                             score -= 2
