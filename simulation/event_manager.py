@@ -15,6 +15,9 @@ class EventManager:
         "nevada",
         "inundacion",
         "plaga",
+        "gran_deslave",
+        "nevada_paralizante",
+        "plaga_de_insectos",
     ]
 
     def __init__(self):
@@ -71,6 +74,22 @@ class EventManager:
         elif self.active_event == "plaga":
             # Cultivos pierden humedad extra
             effects["crop_dry_multiplier"] = 5.0
+
+        elif self.active_event == "gran_deslave":
+            # Terreno devastado: moverse es muy costoso y se pierden cultivos
+            effects["movement_cost_multiplier"] = 4.0
+            effects["energy_drain_per_tick"] = 2.0
+            self._damage_random_crops(state, count=3)
+
+        elif self.active_event == "nevada_paralizante":
+            # Nieve extrema: movimiento casi imposible y drain severo
+            effects["movement_cost_multiplier"] = 5.0
+            effects["energy_drain_per_tick"] = 3.0
+
+        elif self.active_event == "plaga_de_insectos":
+            # Insectos destruyen cultivos directamente y aceleran el secado
+            effects["crop_dry_multiplier"] = 4.0
+            self._damage_random_crops(state, count=2)
 
     def _clear_event(self, state):
         """Limpia todos los efectos cuando el evento termina."""
