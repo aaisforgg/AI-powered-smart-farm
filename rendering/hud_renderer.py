@@ -9,7 +9,7 @@ from rendering.helpers import _card, _label, _bar, _section_title
 
 
 GENE_RANGES = {
-    "energy_max":         (150,  350),
+    "energy_max":         ( 80,  150),
     "energy_consumption": (0.1,  1.5),
     "rest_efficiency":    (0.5,  8.0),
     "exploration_rate":   (0.01, 1.0),
