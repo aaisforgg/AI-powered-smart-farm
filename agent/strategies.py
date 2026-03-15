@@ -25,9 +25,9 @@ class StrategyManager:
         if goal.fase == 0:
             return "PLANT"
 
-        # Fase 1: regar si baja de 70 (riego preventivo más agresivo)
-        if goal.fase == 1 and goal.humedad < 70:
+        # Fase 1: regar si humedad < 85 (mantiene al agente ocupado mientras madura)
+        if goal.fase == 1 and goal.humedad < 85:
             return "WATER"
 
-        # Fase 1 con humedad >= 70: no necesita nada inmediato
+        # Fase 1 con humedad >= 85: suficientemente regado por ahora
         return None
