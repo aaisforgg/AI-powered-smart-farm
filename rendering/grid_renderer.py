@@ -76,6 +76,16 @@ def dibujar_grid(pantalla, state, agente, celda_px, particulas, assets=None, deb
         pygame.draw.circle(pantalla, a_color, (ax_a, ay_a), celda_px // 3)
         pygame.draw.circle(pantalla, (30, 30, 30), (ax_a, ay_a), 1)
 
+    # — Efecto de cosecha —
+    if agente.last_harvest_pos and agente.last_harvest_timer > 0:
+        hx, hy = agente.last_harvest_pos
+        alpha = int(255 * agente.last_harvest_timer / 8)
+        harvest_surf = pygame.Surface((celda_px * 3, celda_px * 3), pygame.SRCALPHA)
+        pygame.draw.circle(harvest_surf, (255, 220, 50, alpha),
+                           (celda_px + celda_px // 2, celda_px + celda_px // 2),
+                           celda_px + 2)
+        pantalla.blit(harvest_surf, ((hx - 1) * celda_px, (hy - 1) * celda_px))
+
     # — Path del agente —
     if agente.current_path:
         path_surf = pygame.Surface((GRID_W, GRID_H), pygame.SRCALPHA)

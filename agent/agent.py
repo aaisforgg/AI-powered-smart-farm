@@ -26,6 +26,9 @@ class Agent:
         self.visual_action = "stationary"
         self.visual_action_ticks = 0
 
+        self.last_harvest_pos = None
+        self.last_harvest_timer = 0
+
         self.goal = None
         self.strategy = None
 
@@ -80,11 +83,15 @@ class Agent:
     def update(self, state):
         tile = state.grid[self.y][self.x]
 
-        # Decrementar timer visual
+        # Decrementar timers visuales
         if self.visual_action_ticks > 0:
             self.visual_action_ticks -= 1
             if self.visual_action_ticks == 0:
                 self.visual_action = "stationary"
+        if self.last_harvest_timer > 0:
+            self.last_harvest_timer -= 1
+        else:
+            self.last_harvest_pos = None
 
         # DESCANSO EN CASA
         if self._handle_resting(state, tile):
@@ -381,7 +388,9 @@ class Agent:
                 if goal.pos in self.memory["known_crops"]:
                     del self.memory["known_crops"][goal.pos]
                 return
-            self._set_visual_action("collecting", 3)
+            self._set_visual_action("collecting", 5)
+            self.last_harvest_pos = goal.pos
+            self.last_harvest_timer = 8
             harvest_bonus = state.active_effects.get("harvest_bonus", 1)
             valor = goal.valor * harvest_bonus
             state.farmer_inventory.append(("crop", goal.pos, goal.tipo, valor))
@@ -506,6 +515,8 @@ class Agent:
         self._rest_start_energy = 0.0
         self.visual_action = "stationary"
         self.visual_action_ticks = 0
+        self.last_harvest_pos = None
+        self.last_harvest_timer = 0
 
         self.memory = {
             "visited_tiles":  set(),
