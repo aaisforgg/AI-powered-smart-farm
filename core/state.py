@@ -9,7 +9,7 @@ class GameState:
     grid: list[list] = field(default_factory=list)
     crops: list = field(default_factory=list)
     animals: list = field(default_factory=list)
-    season: str = "spring"
+    season: str = "Primavera"
     tick: int = 0
     generation: int = 0
     best_fitness: float = 0.0

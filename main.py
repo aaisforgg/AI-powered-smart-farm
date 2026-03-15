@@ -118,6 +118,7 @@ def main():
         farmer_pos=(agente.x, agente.y),
         grid=mundo,
         crops=crops,
+        season=season_mgr.current_season,
         _agent_ref=agente,
         _season_mgr=season_mgr,
         _event_mgr=event_mgr,

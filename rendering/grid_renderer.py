@@ -14,8 +14,6 @@ def dibujar_grid(pantalla, state, agente, celda_px, particulas, assets=None):
 
     # — Fondo: imagen estacional o fallback de tiles por color —
     map_img = assets.get_map(season) if assets else None
-    # DEBUG TEMPORAL — borrar después de verificar
-    print(f"[Render] season='{season}'  map_img={'OK' if map_img else 'None (fallback colores)'}")
     if map_img:
         pantalla.blit(map_img, (0, 0))
     else:
