@@ -40,6 +40,9 @@ EVENT_TINTS = {
     "gran_deslave":       (100,  60,   0,  80),
     "nevada_paralizante": (200, 200, 255, 110),
     "plaga_de_insectos":  (  0, 180,   0,  80),
+    "lluvia_suave":       (100, 150, 255,  30),
+    "sol_ideal":          (255, 230, 100,  25),
+    "cosecha_doble":      (255, 200,  50,  20),
 }
 
 C = {
@@ -74,6 +77,9 @@ EVENT_COLORS = {
     "gran_deslave":       (150, 100,  50),
     "nevada_paralizante": (200, 220, 255),
     "plaga_de_insectos":  (120, 200,  60),
+    "lluvia_suave":       (100, 180, 255),
+    "sol_ideal":          (255, 220,  80),
+    "cosecha_doble":      (255, 200,  50),
 }
 
 GOAL_LABELS = {
@@ -95,6 +101,9 @@ EVENT_LABELS = {
     "gran_deslave":       "Deslave",
     "nevada_paralizante": "Nevada intensa",
     "plaga_de_insectos":  "Plaga de insectos",
+    "lluvia_suave":       "Lluvia suave",
+    "sol_ideal":          "Sol ideal",
+    "cosecha_doble":      "Cosecha doble",
 }
 
 CROP_PHASE_LABELS = {0: "Semilla", 1: "Creciendo", 2: "Lista"}
