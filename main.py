@@ -134,7 +134,7 @@ def main():
         pipeline.run(state)
 
         render_frame(pantalla, state, agente, CELDA_PX, particulas, fuentes, assets)
-        clock.tick(3 if agente.resting else 6)
+        clock.tick(4 if agente.resting else 15)
 
     pygame.quit()
 

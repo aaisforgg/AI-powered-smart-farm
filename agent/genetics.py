@@ -9,11 +9,11 @@ class Genes:
                  exploration_rate=None,
                  vision_radius=None):
 
-        self.energy_max = energy_max if energy_max else random.uniform(80, 150)
+        self.energy_max = energy_max if energy_max else random.uniform(150, 250)
 
         self.energy_consumption = (
             energy_consumption if energy_consumption
-            else random.uniform(0.3, 0.6)
+            else random.uniform(0.2, 0.4)
         )
 
         self.rest_efficiency = (
