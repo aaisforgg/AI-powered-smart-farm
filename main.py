@@ -96,7 +96,7 @@ def main():
             if nodo.type_name == "casa":
                 agente.memory["home_tiles"].add((nodo.x, nodo.y))
 
-    season_mgr = SeasonManager(days_per_season=120)
+    season_mgr = SeasonManager(days_per_season=400)
 
     state = GameState(
         farmer_pos=(agente.x, agente.y),
@@ -134,7 +134,8 @@ def main():
         pipeline.run(state)
 
         render_frame(pantalla, state, agente, CELDA_PX, particulas, fuentes, assets)
-        clock.tick(4 if agente.resting else 15)
+        recovering = agente.resting and state.grid[agente.y][agente.x].type_name == "casa"
+        clock.tick(4 if recovering else 15)
 
     pygame.quit()
 
