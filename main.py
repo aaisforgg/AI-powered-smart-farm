@@ -1,11 +1,20 @@
 import pygame
 import random
+
 from world.farm_grid import MAP_DATA, TILE_TYPES
 from world.node import Node
 from core.state import GameState
+from core.pipeline import Pipeline
+from core.steps import tick_agent, tick_crops, tick_season, tick_events, tick_counter
 from agent.agent import Agent
 from entities.crop import Crop
+from simulation.season_manager import SeasonManager
+from simulation.event_manager import EventManager
 
+
+# ======================================
+# FUNCIONES DE SETUP
+# ======================================
 
 def cargar_mapa_logico():
     grid = []
@@ -18,36 +27,21 @@ def cargar_mapa_logico():
     return grid
 
 
-# ======================================
-# SPAWN RANDOM DEL AGENTE
-# ======================================
-
 def posicion_random_valida(grid):
-
-    tiles_prohibidos = {
-        "agua",
-        "acantilado",
-        "cultivo",
-        "puerta"
-    }
-
+    tiles_prohibidos = {"agua", "acantilado", "cultivo", "puerta"}
     alto = len(grid)
     ancho = len(grid[0])
 
     while True:
-
         x = random.randint(0, ancho - 1)
         y = random.randint(0, alto - 1)
-
         tile = grid[y][x]
-
         if tile.type_name not in tiles_prohibidos and tile.walkable:
             return x, y
 
 
-def _spawn_crops():
-    """Crea la lista inicial de cultivos. Se llama al inicio y en cada nueva vida."""
-    from entities.crop import Crop
+def spawn_crops():
+    """Crea la lista inicial de cultivos."""
     return [
         Crop(50, 40),
         Crop(55, 42),
@@ -57,8 +51,88 @@ def _spawn_crops():
     ]
 
 
-def main():
+# ======================================
+# RENDERING (solo lectura de state)
+# ======================================
 
+COLORES = {
+    "pasto":      (118, 186, 27),
+    "agua":       (74, 163, 223),
+    "acantilado": (142, 112, 72),
+    "edificio":   (180, 70, 50),
+    "cultivo":    (220, 190, 50),
+    "puente":     (150, 100, 50),
+    "puerta":     (200, 160, 80),
+    "casa":       (200, 200, 255),
+}
+
+CROP_COLORS = {
+    0: (180, 140, 20),   # semilla
+    1: (80, 200, 80),    # creciendo
+    2: (255, 80, 80),    # maduro
+}
+
+
+def dibujar(pantalla, state, agente, celda_px):
+    """Dibuja todo. Solo LEE state y agente, nunca escribe."""
+    pantalla.fill((0, 0, 0))
+
+    # Mapa
+    for fila in state.grid:
+        for nodo in fila:
+            color = COLORES.get(nodo.type_name, (255, 255, 255))
+            pygame.draw.rect(
+                pantalla, color,
+                (nodo.x * celda_px, nodo.y * celda_px, celda_px - 1, celda_px - 1)
+            )
+
+    # Cultivos
+    for crop in state.crops:
+        cx, cy = crop.pos
+        color = CROP_COLORS.get(crop.fase, (255, 255, 255))
+        pygame.draw.rect(
+            pantalla, color,
+            (cx * celda_px + 2, cy * celda_px + 2, celda_px - 4, celda_px - 4)
+        )
+
+    # Agente
+    centro = (
+        agente.x * celda_px + celda_px // 2,
+        agente.y * celda_px + celda_px // 2,
+    )
+    pygame.draw.circle(pantalla, (255, 255, 255), centro, celda_px // 2)
+    pygame.draw.circle(pantalla, (0, 0, 255), centro, celda_px // 3)
+
+    pygame.display.flip()
+
+
+# ======================================
+# DEBUG
+# ======================================
+
+def debug_print(state, agente):
+    """Imprime info de debug. Solo LEE, nunca escribe."""
+    print(f"--- Tick {state.tick} ---")
+    print(f"Pos: ({agente.x}, {agente.y}) | Energía: {agente.energy:.1f} | "
+          f"Resting: {agente.resting}")
+    print(f"Goal: {agente.goal} | Path: {len(agente.current_path)}")
+
+    if hasattr(agente, 'genes'):
+        g = agente.genes
+        print(f"Genes → emax:{g.energy_max:.1f} econs:{g.energy_consumption:.2f} "
+              f"rest:{g.rest_efficiency:.2f} expl:{g.exploration_rate:.2f}")
+
+    if state.active_effects:
+        print(f"Efectos activos: {state.active_effects}")
+
+    print()
+
+
+# ======================================
+# MAIN
+# ======================================
+
+def main():
     pygame.init()
 
     celda_px = 12
@@ -68,198 +142,53 @@ def main():
     pantalla = pygame.display.set_mode((ancho, alto))
     pygame.display.set_caption("AI Smart Farm")
 
-    # ==========================
-    # CARGAR MAPA
-    # ==========================
-
+    # --- Setup ---
     mundo = cargar_mapa_logico()
-
-    # ==========================
-    # SPAWN RANDOM DEL AGENTE
-    # ==========================
-
     spawn_x, spawn_y = posicion_random_valida(mundo)
-
     print(f"Spawn del agente: ({spawn_x}, {spawn_y})")
 
-    agente = Agent(spawn_x, spawn_y, crop_factory=_spawn_crops)
+    agente = Agent(spawn_x, spawn_y, crop_factory=spawn_crops)
+    crops = spawn_crops()
+    season_mgr = SeasonManager(days_per_season=30)
+    event_mgr = EventManager()
 
-    # ==========================
-    # CULTIVOS
-    # ==========================
-
-    crops = _spawn_crops()
-
-    # ==========================
-    # GAME STATE
-    # ==========================
-
+    # --- GameState: el bus central ---
     state = GameState(
         farmer_pos=(agente.x, agente.y),
         grid=mundo,
-        crops=crops
+        crops=crops,
+        _agent_ref=agente,
+        _season_mgr=season_mgr,
+        _event_mgr=event_mgr,
     )
 
-    # ==========================
-    # COLORES
-    # ==========================
+    # --- Pipeline: el ÚNICO orquestador del game loop ---
+    pipeline = Pipeline(
+        tick_agent,
+        tick_crops,
+        tick_season,
+        tick_events,
+        tick_counter,
+    )
 
-    colores = {
-        "pasto": (118, 186, 27),
-        "agua": (74, 163, 223),
-        "acantilado": (142, 112, 72),
-        "edificio": (180, 70, 50),
-        "cultivo": (220, 190, 50),
-        "puente": (150, 100, 50),
-        "puerta": (200, 160, 80),
-        "casa": (200, 200, 255)
-    }
-
+    # --- Game Loop ---
     clock = pygame.time.Clock()
     ejecutando = True
 
     while ejecutando:
-
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 ejecutando = False
 
-        # ==========================
-        # UPDATE AGENTE
-        # ==========================
+        # === TODO el game logic pasa por el pipeline ===
+        pipeline.run(state)
 
-        # ==========================
-        # DEBUG ENERGÍA
-        # ==========================
+        # === Debug (solo lectura) ===
+        debug_print(state, agente)
 
-        energia_antes = agente.energy
+        # === Rendering (solo lectura) ===
+        dibujar(pantalla, state, agente, celda_px)
 
-        agente.update(state)
-
-        energia_despues = agente.energy
-        consumo = energia_despues - energia_antes
-
-        print("----------- AGENTE -----------")
-        print(f"Tick: {state.tick}")
-        print(f"Posición: ({agente.x}, {agente.y})")
-
-        print(f"Energía: {energia_antes:.2f} -> {energia_despues:.2f}")
-
-        if consumo < 0:
-            print(f"Consumo energía: {consumo:.2f}")
-        else:
-            print(f"Recuperación energía: +{consumo:.2f}")
-
-        print(f"Resting: {agente.resting}")
-
-        # ==========================
-        # GENÉTICA
-        # ==========================
-
-        if hasattr(agente, "genes"):
-            g = agente.genes
-
-            print(
-            f"Genes -> "
-            f"energy_max:{g.energy_max:.2f} "
-            f"energy_consumption:{g.energy_consumption:.2f} "
-            f"rest_efficiency:{g.rest_efficiency:.2f} "
-            f"exploration_rate:{g.exploration_rate:.2f}"
-            )
-
-        print("--------------------------------")
-
-        print(
-            f"Agente: ({agente.x}, {agente.y}) | "
-            f"goal: {agente.goal} | "
-            f"path: {len(agente.current_path)}"
-        )
-
-        state.farmer_pos = (agente.x, agente.y)
-        state.tick += 1
-
-        # ==========================
-        # CRECIMIENTO DE CULTIVOS
-        # ==========================
-
-        for crop in state.crops:
-            crop.crecer(
-               tasa_secado=1.0,
-                ticks_por_fase=20
-            )
-
-        # ==========================
-        # DIBUJAR
-        # ==========================
-
-        pantalla.fill((0, 0, 0))
-
-        for fila in mundo:
-            for nodo in fila:
-
-                color = colores.get(nodo.type_name, (255, 255, 255))
-
-                pygame.draw.rect(
-                    pantalla,
-                    color,
-                    (
-                        nodo.x * celda_px,
-                        nodo.y * celda_px,
-                        celda_px - 1,
-                        celda_px - 1
-                    )
-                )
-
-        # ==========================
-        # CULTIVOS
-        # ==========================
-
-        for crop in state.crops:
-
-            cx, cy = crop.pos
-
-            if crop.fase == 0:
-                color_crop = (180, 140, 20)
-            elif crop.fase == 1:
-                color_crop = (80, 200, 80)
-            else:
-                color_crop = (255, 80, 80)
-
-            pygame.draw.rect(
-                pantalla,
-                color_crop,
-                (
-                    cx * celda_px + 2,
-                    cy * celda_px + 2,
-                    celda_px - 4,
-                    celda_px - 4
-                )
-            )
-
-        # ==========================
-        # AGENTE
-        # ==========================
-
-        centro = (
-            agente.x * celda_px + celda_px // 2,
-            agente.y * celda_px + celda_px // 2
-        )
-
-        pygame.draw.circle(
-            pantalla,
-            (255, 255, 255),
-            centro,
-            celda_px // 2
-        )
-
-        pygame.draw.circle(
-            pantalla,
-            (0, 0, 255),
-            centro,
-            celda_px // 3
-        )
-
-        pygame.display.flip()
         clock.tick(10)
 
     pygame.quit()
