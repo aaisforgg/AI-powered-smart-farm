@@ -46,8 +46,10 @@ def dibujar_grid(pantalla, state, agente, celda_px, particulas, assets=None, deb
     if debug_visual and agente.memory.get("visited_tiles"):
         dbg_surf = pygame.Surface((GRID_W, GRID_H), pygame.SRCALPHA)
         for vx, vy in agente.memory["visited_tiles"]:
-            pygame.draw.rect(dbg_surf, (255, 230, 40, 90),
+            pygame.draw.rect(dbg_surf, (255, 255, 0, 140),
                              (vx * celda_px, vy * celda_px, celda_px, celda_px))
+            pygame.draw.rect(dbg_surf, (255, 200, 0, 80),
+                             (vx * celda_px + 1, vy * celda_px + 1, celda_px - 2, celda_px - 2))
         pantalla.blit(dbg_surf, (0, 0))
 
     # — Crops —
