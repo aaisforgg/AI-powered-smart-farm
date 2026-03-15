@@ -318,7 +318,12 @@ class Agent:
     # ── PATH HELPERS ────────────────────────────────────────────────────────
 
     def _centralize_path(self, path, grid):
-        """Ajusta el path para alejarse de obstáculos SIN crear diagonales."""
+        """Ajusta el path para alejarse de obstáculos SIN crear diagonales.
+
+        Si en cualquier paso no se puede ajustar manteniendo adyacencia
+        cardinal con el nodo previo ajustado, devuelve el path original
+        intacto — garantizando que follow_path nunca encuentre un salto > 1.
+        """
         if not path:
             return path
 
@@ -331,7 +336,7 @@ class Agent:
             x, y = path[i]
             prev = new_path[-1]
 
-            best = (x, y)
+            best = None
             best_score = -999
 
             for dx, dy in [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)]:
@@ -360,8 +365,12 @@ class Agent:
                     best_score = score
                     best = (nx, ny)
 
-            if best_score > -999:
+            if best is not None:
                 new_path.append(best)
+            else:
+                # Ajuste previo causó cascada — el nodo original ya no es
+                # adyacente al prev ajustado. Devolver path original intacto.
+                return path
 
         return new_path
 
