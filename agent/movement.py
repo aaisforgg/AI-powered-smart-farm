@@ -7,6 +7,9 @@ class Movement:
     def follow_path(self, agent):
         if agent.current_path:
             nx, ny = agent.current_path.popleft()
+            if abs(nx - agent.x) + abs(ny - agent.y) != 1:
+                agent.current_path.clear()
+                return
             agent.x = nx
             agent.y = ny
 

@@ -146,6 +146,13 @@ class Agent:
                     self.current_path = deque(path[1:])
                     self.resting = True
                 return
+            else:
+                # Casa desconocida: explorar para encontrarla, sin ejecutar estrategias
+                self.goal = None
+                self.strategy = None
+                self.current_path.clear()
+                self.movement.explore(self, state.grid)
+                return
 
         # REPLAN
         if self.needs_replan:
@@ -164,7 +171,10 @@ class Agent:
                     print(f"[Agent] Ruta calculada a {self.goal.pos} — {len(self.current_path)} pasos")
                 else:
                     print(f"[Agent] Sin ruta a {self.goal.pos}")
-                    self._reset_goal()
+                    # No limpiar current_path — puede haber un path de exploración vigente
+                    self.goal = None
+                    self.strategy = None
+                    self.needs_replan = False
          
         if self.goal and not self.current_path:
             gx, gy = self.goal.pos
@@ -222,9 +232,6 @@ class Agent:
         # si no hay zonas nuevas, explorar normal
         self.movement.explore(self, state.grid)
 
-        if not self.current_path:
-            self.movement.explore(self, state.grid)
-
     def _execute_strategy(self, state):
         """Ejecuta la acción planeada sobre el crop objetivo."""
         if not self.goal or not self.strategy:
@@ -250,6 +257,10 @@ class Agent:
             crop.fase = 1
 
         elif self.strategy == "HARVEST":
+            if crop not in state.crops:
+                if crop.pos in self.memory["known_crops"]:
+                    del self.memory["known_crops"][crop.pos]
+                return
             state.farmer_inventory.append(("crop", crop.pos))
             state.crops.remove(crop)
             self.life_stats["harvests"] += 1
@@ -304,7 +315,9 @@ class Agent:
                     best_score = score
                     best = (nx, ny)
 
-            new_path.append(best)
+            if best_score > -999:
+                new_path.append(best)
+            # Si no hay candidato cardinal válido, se omite el nodo (mejor que un salto diagonal)
 
         return new_path
 
