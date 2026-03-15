@@ -4,6 +4,7 @@ import random
 
 from agent.strategies import StrategyManager
 from core import state
+from core.constants import REST_TICKS_MAX
 from core.debug import debug_tick
 from entities import crop
 from .decision import DecisionSystem
@@ -38,10 +39,11 @@ class Agent:
 
         self.energy = self.genes.energy_max
         self.max_energy = self.genes.energy_max
-        self.energy_threshold = self.genes.energy_max * 0.15
+        self.energy_threshold = self.genes.energy_max * 0.10
         self.energy_recovery = 4.0
         self.resting = False
         self.rest_ticks = 0
+        self._rest_start_energy = 0.0
 
         self.evolution = EvolutionEngine()
 
@@ -128,18 +130,26 @@ class Agent:
         if not (self.resting and tile.type_name == "casa"):
             return False
 
+        # Registrar energía al inicio del descanso
         if self.life_stats["energy_on_rest"] is None:
             self.life_stats["energy_on_rest"] = self.energy
+            self._rest_start_energy = self.energy
 
-        self.energy = min(self.max_energy, self.energy + self.genes.rest_efficiency)
+        # Recuperación lineal: de energía inicial → max_energy en REST_TICKS_MAX ticks
+        recovery_per_tick = (self.max_energy - self._rest_start_energy) / REST_TICKS_MAX
+        self.energy = min(self.max_energy, self.energy + recovery_per_tick)
         self.rest_ticks += 1
-        print(f"[Agent] Descansando... dia={self.rest_ticks}/3 energia={self.energy:.1f}")
 
-        if self.rest_ticks >= 3 or self.energy >= self.max_energy:
-            self.energy = min(self.energy, self.max_energy)
+        day = (self.rest_ticks - 1) // (REST_TICKS_MAX // 3) + 1
+        print(f"[Agent] Descansando día {day}/3 — tick {self.rest_ticks}/{REST_TICKS_MAX} "
+              f"— energía {self.energy:.1f}/{self.max_energy:.0f}")
+
+        if self.rest_ticks >= REST_TICKS_MAX:
+            self.energy = self.max_energy
             self.resting = False
             self.rest_ticks = 0
-            print("[Agent] Descanso terminado. Volviendo al trabajo")
+            self._rest_start_energy = 0.0
+            print("[Agent] Descanso de 3 días completado. Volviendo al trabajo")
 
             self.evolution.end_life(self)
             print(f"[Agent] Generación {self.evolution.generation} | "
@@ -441,6 +451,7 @@ class Agent:
         self.needs_replan = False
         self.resting = False
         self.rest_ticks = 0
+        self._rest_start_energy = 0.0
 
         self.memory = {
             "visited_tiles":  set(),
