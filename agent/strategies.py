@@ -25,9 +25,5 @@ class StrategyManager:
         if goal.fase == 0:
             return "PLANT"
 
-        # Fase 1: regar si humedad < 85 (mantiene al agente ocupado mientras madura)
-        if goal.fase == 1 and goal.humedad < 85:
-            return "WATER"
-
-        # Fase 1 con humedad >= 85: suficientemente regado por ahora
-        return None
+        # Fase 1: siempre regar (humedad se capea a 100, mejor que estar idle)
+        return "WATER"
