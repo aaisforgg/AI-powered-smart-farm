@@ -1,6 +1,5 @@
 import random
 
-
 class EventManager:
     """
     Gestiona eventos climáticos/ambientales.
@@ -75,7 +74,7 @@ class EventManager:
 
     def _clear_event(self, state):
         """Limpia todos los efectos cuando el evento termina."""
-        print(f"[Evento] {(self.active_event or 'desconocido').upper()} terminó")        
+        print(f"[Evento] {(self.active_event or 'desconocido').upper()} terminó")
         self.active_event = None
         state.active_effects.clear()
 
