@@ -2,6 +2,7 @@ import pygame
 
 from rendering.theme import (
     COLORES, CROP_COLORS, SEASON_TINTS, EVENT_TINTS,
+    OBSTACLE_COLORS, OBSTACLE_BORDER_COLORS,
     GRID_W, GRID_H, CELDA_PX,
 )
 
@@ -62,6 +63,34 @@ def dibujar_grid(pantalla, state, agente, celda_px, particulas, assets=None, deb
             color = CROP_COLORS.get(crop.fase, (255, 255, 255))
             pygame.draw.rect(pantalla, color,
                 (cx * celda_px + 2, cy * celda_px + 2, celda_px - 4, celda_px - 4))
+
+    # — Obstáculos estacionales (diagonal ╲╱ = persistentes toda la estación) —
+    for ox, oy, tipo in state.seasonal_obstacles:
+        color = OBSTACLE_COLORS.get(tipo, (150, 150, 150))
+        border_color = OBSTACLE_BORDER_COLORS.get(tipo, (80, 80, 80))
+        rect_full = (ox * celda_px, oy * celda_px, celda_px, celda_px)
+        pygame.draw.rect(pantalla, color, rect_full)
+        rect_inner = (ox * celda_px + 1, oy * celda_px + 1, celda_px - 2, celda_px - 2)
+        pygame.draw.rect(pantalla, border_color, rect_inner, 1)
+        # Diagonal × para distinguirlos de los temporales
+        x0, y0 = ox * celda_px + 2, oy * celda_px + 2
+        x1, y1 = ox * celda_px + celda_px - 3, oy * celda_px + celda_px - 3
+        pygame.draw.line(pantalla, border_color, (x0, y0), (x1, y1), 1)
+        pygame.draw.line(pantalla, border_color, (x1, y0), (x0, y1), 1)
+
+    # — Obstáculos temporales de evento (+ = duran lo que el evento) —
+    for ox, oy, tipo in state.temp_obstacles:
+        color = OBSTACLE_COLORS.get(tipo, (150, 150, 150))
+        border_color = OBSTACLE_BORDER_COLORS.get(tipo, (80, 80, 80))
+        rect_full = (ox * celda_px, oy * celda_px, celda_px, celda_px)
+        pygame.draw.rect(pantalla, color, rect_full)
+        rect_inner = (ox * celda_px + 1, oy * celda_px + 1, celda_px - 2, celda_px - 2)
+        pygame.draw.rect(pantalla, border_color, rect_inner, 2)
+        # Cruz + para identificación rápida
+        cx = ox * celda_px + celda_px // 2
+        cy = oy * celda_px + celda_px // 2
+        pygame.draw.line(pantalla, border_color, (cx - 2, cy), (cx + 2, cy), 1)
+        pygame.draw.line(pantalla, border_color, (cx, cy - 2), (cx, cy + 2), 1)
 
     # — Animales —
     for animal in state.animals:

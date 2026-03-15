@@ -108,3 +108,17 @@ EVENT_LABELS = {
 
 CROP_PHASE_LABELS = {0: "Semilla", 1: "Creciendo", 2: "Lista"}
 CROP_PHASE_COLORS = {0: (180, 140, 20), 1: (80, 200, 80), 2: (255, 80, 80)}
+
+OBSTACLE_COLORS = {
+    "nieve":    (200, 230, 255),   # azul hielo claro
+    "charco":   ( 20,  80, 210),   # azul marino brillante
+    "escombro": (190, 140,  60),   # naranja-marrón cálido
+    "lodo":     ( 70,  40,  10),   # marrón muy oscuro
+}
+
+OBSTACLE_BORDER_COLORS = {
+    "nieve":    (120, 170, 230),   # azul medio
+    "charco":   (  0,  40, 160),   # azul oscuro
+    "escombro": (130,  80,  20),   # naranja quemado
+    "lodo":     (140,  90,  40),   # marrón claro contraste
+}

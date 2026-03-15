@@ -34,6 +34,7 @@ class Agent:
 
         self.current_path = deque()
         self.needs_replan = False
+        self.path_failures = 0
 
         self.decision_system = DecisionSystem()
         self.movement = Movement()
@@ -257,11 +258,16 @@ class Agent:
         gx, gy = self.goal.pos
         path = self.pathfinder.find_path(self.x, self.y, gx, gy, state.grid)
         if path:
+            self.path_failures = 0
             path = self._centralize_path(path, state.grid)
             self.current_path = deque(path[1:])
             print(f"[Agent] Ruta calculada a {self.goal.pos} — {len(self.current_path)} pasos")
         else:
-            print(f"[Agent] Sin ruta a {self.goal.pos}")
+            self.path_failures += 1
+            penalty = min(self.path_failures * 1.0, 6.0)
+            self.energy -= penalty
+            print(f"[Agent] Bloqueado — fallo #{self.path_failures} hacia {self.goal.pos} "
+                  f"| -{penalty:.1f} energía (quedan {self.energy:.1f})")
             self.goal = None
             self.strategy = None
             self.needs_replan = False
@@ -310,8 +316,12 @@ class Agent:
                 self._execute_strategy(state)
                 self._reset_goal()
             else:
-                # Path agotado pero no llegamos al goal — replanificar
-                print(f"[Agent] Path exhausto con dist={dist} > 1, forzando replan")
+                # Path cortado por obstáculo mid-ruta — penalizar y replanificar
+                self.path_failures += 1
+                penalty = min(self.path_failures * 0.8, 4.0)
+                self.energy -= penalty
+                print(f"[Agent] Camino cortado por obstáculo (dist={dist}) "
+                      f"| -{penalty:.1f} energía | fallo #{self.path_failures}")
                 self.needs_replan = True
 
         return True
@@ -498,6 +508,21 @@ class Agent:
     # ── CICLO DE VIDA ───────────────────────────────────────────────────────
 
     def _reset_for_new_life(self, state):
+        # Limpiar obstáculos de evento sin tocar los estacionales que persisten
+        seasonal_blocked = {(x, y) for x, y, _ in state.seasonal_obstacles}
+        for x, y, _ in state.temp_obstacles:
+            if (x, y) not in seasonal_blocked:
+                state.grid[y][x].walkable = True
+        state.temp_obstacles.clear()
+        # Limpiar efectos de evento (preservar estacionales que SeasonManager reescribe)
+        for k in ("event_name", "movement_cost_multiplier", "energy_drain_per_tick",
+                  "crop_dry_multiplier", "harvest_bonus", "growth_multiplier_bonus"):
+            state.active_effects.pop(k, None)
+        if state._event_mgr is not None:
+            state._event_mgr.active_event = None
+            state._event_mgr.duration_remaining = 0
+        self.path_failures = 0
+
         if self.memory["home_tiles"]:
             hx, hy = next(iter(self.memory["home_tiles"]))
             self.x = hx
