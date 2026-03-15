@@ -26,12 +26,12 @@ def _gene_pct(value, gene_name):
 class HUDLayout:
     """Apila secciones verticalmente con padding automático."""
 
-    def __init__(self, x, width, start_y=8, gap=8):
+    def __init__(self, x, width, start_y=8, gap=12):
         self.x   = x
         self.w   = width
         self.y   = start_y
         self.gap = gap
-        self.pad = 12
+        self.pad = 14
 
     def next_section(self, height):
         """Reserva espacio para una sección. Retorna (x, y, w, h)."""
@@ -41,23 +41,18 @@ class HUDLayout:
 
 
 # ── Constantes de layout ───────────────────────────────────────────────────────
-# 44+68+48+120+114+80+80+68+68 = 690 + gaps(72) + start(8) = 770
-# Footer fijo en WINDOW_H-15 = 765
-_H_HEADER    = 44
-_H_SEASON    = 68
-_H_EVENT     = 48
-_H_AGENT     = 120
-_H_GENETICS  = 114
-_H_EVOLUTION = 80   # +16 vs anterior para sparkline
-_H_CROPS     = 80
-_H_SIM       = 68
-_H_LOG       = 68   # últimas acciones (nuevo)
+# 50+76+54+130+120+88+84+72 = 674 + gaps(96) + start(8) = 778
+_H_HEADER    = 50
+_H_SEASON    = 76
+_H_EVENT     = 54
+_H_AGENT     = 130
+_H_GENETICS  = 120
+_H_EVOLUTION = 88
+_H_CROPS     = 84
+_H_SIM       = 72
 
-# Espaciado interno de tarjetas
-_PAD        = 12
-_TITLE_H    = 26
-_ROW_H      = 18   # fila estándar (ajustado para que quepa todo)
-_CONTENT_Y0 = 28   # primera fila tras el divisor
+_PAD        = 14
+_ROW_H      = 20
 
 
 def dibujar_hud(pantalla, state, agente, fuentes):
@@ -75,7 +70,7 @@ def dibujar_hud(pantalla, state, agente, fuentes):
     hx, hy, hw, hh = layout.next_section(_H_HEADER)
     _card(pantalla, hx, hy, hw, hh, radius=8)
     _label(pantalla, fuentes, "AI SMART FARM",       hx + pad, hy + 12, C["accent"],  "md")
-    _label(pantalla, fuentes, "Simulación autónoma",  hx + pad, hy + 29, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, "Simulación autónoma",  hx + pad, hy + 30, C["txt_dim"], "xs")
     gen_txt = f"Gen. {gen_num}"
     gen_w   = fuentes["xs"].size(gen_txt)[0]
     _label(pantalla, fuentes, gen_txt, hx + hw - pad - gen_w, hy + 16, C["txt_dim"], "xs")
@@ -86,13 +81,13 @@ def dibujar_hud(pantalla, state, agente, fuentes):
     s_color = SEASON_COLORS.get(season, C["txt_mid"])
     _card(pantalla, sx, sy, sw, sh, radius=8)
     _section_title(pantalla, fuentes, "ESTACIÓN", sx + pad, sy + pad, sw - pad * 2)
-    _label(pantalla, fuentes, season, sx + pad, sy + 30, s_color, "sm")
+    _label(pantalla, fuentes, season, sx + pad, sy + 32, s_color, "sm")
     day_in_season = getattr(state, "_season_mgr", None)
     if day_in_season and hasattr(day_in_season, "days_passed"):
         dp  = day_in_season.days_passed
         dps = day_in_season.days_per_season
-        _bar(pantalla, sx + pad, sy + 44, sw - pad * 2, 8, dp / dps, s_color, s_color)
-        _label(pantalla, fuentes, f"Día {dp} de {dps}", sx + pad, sy + 56, C["txt_dim"], "xs")
+        _bar(pantalla, sx + pad, sy + 50, sw - pad * 2, 8, dp / dps, s_color, s_color)
+        _label(pantalla, fuentes, f"Día {dp} de {dps}", sx + pad, sy + 62, C["txt_dim"], "xs")
 
     # ── Evento ────────────────────────────────────────────────────────────
     ex, ey, ew, eh = layout.next_section(_H_EVENT)
@@ -101,8 +96,8 @@ def dibujar_hud(pantalla, state, agente, fuentes):
     evt_color  = EVENT_COLORS.get(event_name, C["accent2"]) if event_name else C["txt_mid"]
     _card(pantalla, ex, ey, ew, eh, radius=8)
     _section_title(pantalla, fuentes, "EVENTO", ex + pad, ey + pad, ew - pad * 2)
-    pygame.draw.circle(pantalla, evt_color, (ex + pad + 5, ey + 34), 5)
-    _label(pantalla, fuentes, evt_label, ex + pad + 18, ey + 27, evt_color, "sm")
+    pygame.draw.circle(pantalla, evt_color, (ex + pad + 5, ey + 38), 5)
+    _label(pantalla, fuentes, evt_label, ex + pad + 18, ey + 31, evt_color, "sm")
 
     # ── Agente ────────────────────────────────────────────────────────────
     ax, ay, aw, ah = layout.next_section(_H_AGENT)
@@ -134,13 +129,12 @@ def dibujar_hud(pantalla, state, agente, fuentes):
     val1_x = col1_x + 62
     val2_x = col2_x + 44
     row_h  = _ROW_H
-
-    r0y = ay + _CONTENT_Y0
+    r0y    = ay + 32
 
     # Fila 0: Pos | Estado
-    _label(pantalla, fuentes, "Pos",               col1_x, r0y,            C["txt_dim"], "xs")
-    _label(pantalla, fuentes, f"({agente.x},{agente.y})", val1_x, r0y,    C["txt_hi"],  "xs")
-    _label(pantalla, fuentes, estado_txt,            col2_x, r0y,          estado_col,   "xs")
+    _label(pantalla, fuentes, "Pos",                    col1_x, r0y,           C["txt_dim"], "xs")
+    _label(pantalla, fuentes, f"({agente.x},{agente.y})", val1_x, r0y,         C["txt_hi"],  "xs")
+    _label(pantalla, fuentes, estado_txt,                col2_x, r0y,          estado_col,   "xs")
 
     # Fila 1: Goal | Acción
     _label(pantalla, fuentes, "Goal",      col1_x, r0y + row_h,     C["txt_dim"], "xs")
@@ -160,7 +154,7 @@ def dibujar_hud(pantalla, state, agente, fuentes):
            ax + aw - pad - fuentes["xs"].size(pct_txt)[0], bar_row_y, C["txt_mid"], "xs")
 
     # Fila 3: Valores energía | Path
-    r3y = bar_row_y + 18
+    r3y = bar_row_y + 20
     _label(pantalla, fuentes, f"{agente.energy:.0f}/{agente.max_energy:.0f}",
            col1_x, r3y, C["txt_dim"], "xs")
     _label(pantalla, fuentes, "Path",   col2_x, r3y, C["txt_dim"], "xs")
@@ -168,10 +162,10 @@ def dibujar_hud(pantalla, state, agente, fuentes):
 
     # Fila 4: Cosechas | Inventario
     r4y = r3y + row_h
-    _label(pantalla, fuentes, "Cosechas", col1_x, r4y, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, "Cosechas",    col1_x, r4y, C["txt_dim"], "xs")
     _label(pantalla, fuentes, str(cosechas), val1_x, r4y, C["accent2"], "xs")
-    _label(pantalla, fuentes, "Inv.",      col2_x, r4y, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, inv_str,     val2_x, r4y, C["accent2"], "xs")
+    _label(pantalla, fuentes, "Inv.",        col2_x, r4y, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, inv_str,       val2_x, r4y, C["accent2"], "xs")
 
     # ── Genética ──────────────────────────────────────────────────────────
     gx, gy, gw, gh = layout.next_section(_H_GENETICS)
@@ -188,8 +182,8 @@ def dibujar_hud(pantalla, state, agente, fuentes):
         ("Riesgo", f"{g.risk_tolerance:.2f}",       _gene_pct(g.risk_tolerance,     "risk_tolerance")),
     ]
     gene_col_w  = (gw - pad * 2) // 2
-    gene_row_h  = 28
-    gene_row0_y = gy + 28
+    gene_row_h  = 30
+    gene_row0_y = gy + 30
 
     for i, (lbl, val, pct) in enumerate(gene_stats):
         col = i % 2
@@ -225,21 +219,21 @@ def dibujar_hud(pantalla, state, agente, fuentes):
     _card(pantalla, vx, vy, vw, vh, radius=8)
     _section_title(pantalla, fuentes, evo_title, vx + pad, vy + pad, vw - pad * 2)
 
-    _label(pantalla, fuentes, "Gen.",         evo_col1_x, vy + 32, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, str(gen_num),   evo_val1_x, vy + 32, C["txt_hi"],  "xs")
-    _label(pantalla, fuentes, "Actual",        evo_col2_x, vy + 32, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, f"{last_fitness:.1f}", evo_val2_x, vy + 32, C["txt_hi"], "xs")
+    _label(pantalla, fuentes, "Gen.",              evo_col1_x, vy + 34, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, str(gen_num),        evo_val1_x, vy + 34, C["txt_hi"],  "xs")
+    _label(pantalla, fuentes, "Actual",             evo_col2_x, vy + 34, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, f"{last_fitness:.1f}", evo_val2_x, vy + 34, C["txt_hi"], "xs")
 
-    _label(pantalla, fuentes, "Mejor",         evo_col1_x, vy + 50, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, f"{best_fitness:.1f}", evo_val1_x + 4, vy + 50, C["accent2"], "xs")
-    _label(pantalla, fuentes, "Tend.",          evo_col2_x, vy + 50, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, trend,             evo_val2_x, vy + 50, trend_col,   "sm")
+    _label(pantalla, fuentes, "Mejor",              evo_col1_x, vy + 52, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, f"{best_fitness:.1f}", evo_val1_x + 4, vy + 52, C["accent2"], "xs")
+    _label(pantalla, fuentes, "Tend.",               evo_col2_x, vy + 52, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, trend,                  evo_val2_x, vy + 52, trend_col,   "sm")
 
     # Sparkline de fitness
     history = list(evo.fitness_history[-15:])
     if len(history) >= 2:
         spark_x = vx + pad
-        spark_y = vy + vh - 16
+        spark_y = vy + vh - 18
         spark_w = vw - pad * 2
         spark_h = 12
 
@@ -261,8 +255,8 @@ def dibujar_hud(pantalla, state, agente, fuentes):
         fase_counts[crop.fase] = fase_counts.get(crop.fase, 0) + 1
     total = len(state.crops)
 
-    crop_row_h  = 16
-    crop_row0_y = cy_s + 26
+    crop_row_h  = 18
+    crop_row0_y = cy_s + 28
 
     _card(pantalla, cx, cy_s, cw, ch, radius=8)
     _section_title(pantalla, fuentes, f"CULTIVOS  ({total} total)", cx + pad, cy_s + pad, cw - pad * 2)
@@ -275,7 +269,7 @@ def dibujar_hud(pantalla, state, agente, fuentes):
         cnt_w = fuentes["xs"].size(str(cnt))[0]
         _label(pantalla, fuentes, str(cnt), cx + cw - pad - cnt_w, by, C["txt_hi"], "xs")
         if total > 0:
-            _bar(pantalla, bx + 14, by + 12, cw - pad * 2 - 14, 4,
+            _bar(pantalla, bx + 14, by + 12, cw - pad * 2 - 14, 5,
                  cnt / total, CROP_PHASE_COLORS[fase], CROP_PHASE_COLORS[fase])
 
     # ── Simulación ────────────────────────────────────────────────────────
@@ -292,26 +286,14 @@ def dibujar_hud(pantalla, state, agente, fuentes):
     _card(pantalla, smx, smy, smw, smh, radius=8)
     _section_title(pantalla, fuentes, "SIMULACIÓN", smx + pad, smy + pad, smw - pad * 2)
 
-    _label(pantalla, fuentes, "Tick",          sim_col1_x, smy + 32, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, str(state.tick), sim_val1_x, smy + 32, C["txt_hi"],  "sm")
-    _label(pantalla, fuentes, "Gen.",           sim_col2_x, smy + 32, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, str(gen_num),     sim_val2_x, smy + 32, C["txt_mid"], "sm")
+    _label(pantalla, fuentes, "Tick",          sim_col1_x, smy + 34, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, str(state.tick), sim_val1_x, smy + 34, C["txt_hi"],  "sm")
+    _label(pantalla, fuentes, "Gen.",           sim_col2_x, smy + 34, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, str(gen_num),     sim_val2_x, smy + 34, C["txt_mid"], "sm")
 
     inv_str2  = f"{inventory} items"
     tiles_str = f"{visited}/{total_tiles}"
-    _label(pantalla, fuentes, "Inv.",     sim_col1_x, smy + 48, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, inv_str2,   sim_val1_x, smy + 48, C["txt_mid"], "xs")
-    _label(pantalla, fuentes, "Tiles",    sim_col2_x, smy + 48, C["txt_dim"], "xs")
-    _label(pantalla, fuentes, tiles_str,  sim_val2_x, smy + 48, C["txt_mid"], "xs")
-
-    # ── Últimas acciones ──────────────────────────────────────────────────
-    lx, ly, lw, lh = layout.next_section(_H_LOG)
-    _card(pantalla, lx, ly, lw, lh, radius=8)
-    _section_title(pantalla, fuentes, "ÚLTIMAS ACCIONES", lx + pad, ly + pad, lw - pad * 2)
-
-    actions = list(agente.memory.get("last_actions", []))[-3:]
-    for i, (action, pos) in enumerate(reversed(actions)):
-        txt   = f"{action} → ({pos[0]},{pos[1]})"
-        color = C["txt_mid"] if i == 0 else C["txt_dim"]
-        _label(pantalla, fuentes, txt, lx + pad, ly + 26 + i * 13, color, "xs")
-
+    _label(pantalla, fuentes, "Inv.",    sim_col1_x, smy + 52, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, inv_str2,  sim_val1_x, smy + 52, C["txt_mid"], "xs")
+    _label(pantalla, fuentes, "Tiles",   sim_col2_x, smy + 52, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, tiles_str, sim_val2_x, smy + 52, C["txt_mid"], "xs")
