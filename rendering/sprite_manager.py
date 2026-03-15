@@ -40,14 +40,16 @@ class SpriteManager:
         print(f"[Sprites] Cargados {len(self._sprites)} sprites del agente")
 
     def _load_sprite(self, base, action, direction, filename):
-        path = os.path.join(base, filename)
-        try:
-            img = pygame.image.load(path).convert_alpha()
-            self._sprites[(action, direction)] = pygame.transform.scale(
-                img, (self.sprite_size, self.sprite_size)
-            )
-        except (FileNotFoundError, pygame.error):
-            pass  # Sin archivo = fallback al glow circle
+        for name in [filename, filename.replace(".", " .")]:
+            path = os.path.join(base, name)
+            try:
+                img = pygame.image.load(path).convert_alpha()
+                self._sprites[(action, direction)] = pygame.transform.scale(
+                    img, (self.sprite_size, self.sprite_size)
+                )
+                return
+            except (FileNotFoundError, pygame.error):
+                continue
 
     def get_sprite(self, action, direction_tuple):
         direction = DIR_MAP.get(direction_tuple, "front")
