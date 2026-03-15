@@ -106,20 +106,14 @@ def dibujar_grid(pantalla, state, agente, celda_px, particulas, assets=None, deb
         pantalla.blit(goal_surf, (gx_px * celda_px - 2, gy_px * celda_px - 2))
 
     # — Agente —
-    ax = agente.x * celda_px + celda_px // 2
-    ay = agente.y * celda_px + celda_px // 2
-    r  = celda_px // 2
-    agent_img = assets.get_agent() if assets else None
-    if agent_img:
-        pantalla.blit(agent_img, (agente.x * celda_px, agente.y * celda_px))
+    if assets and assets.sprites._loaded:
+        sprite, off_x, off_y = assets.sprites.get_agent_sprite(agente)
+        if sprite:
+            pantalla.blit(sprite, (agente.x * celda_px - off_x, agente.y * celda_px - off_y))
+        else:
+            _draw_agent_fallback(pantalla, agente, celda_px)
     else:
-        glow_surf = pygame.Surface((r * 6, r * 6), pygame.SRCALPHA)
-        pygame.draw.circle(glow_surf, (80, 160, 255, 45), (r * 3, r * 3), r * 3)
-        pygame.draw.circle(glow_surf, (80, 160, 255, 70), (r * 3, r * 3), r * 2)
-        pantalla.blit(glow_surf, (ax - r * 3, ay - r * 3))
-        pygame.draw.circle(pantalla, (200, 220, 255), (ax, ay), r)
-        pygame.draw.circle(pantalla, ( 60, 130, 255), (ax, ay), r - 2)
-        pygame.draw.circle(pantalla, (180, 210, 255), (ax, ay), r // 2)
+        _draw_agent_fallback(pantalla, agente, celda_px)
 
     # — Partículas (nieve/lluvia) —
     if season == "Invierno" or event_name in ("tormenta", "nevada", "nevada_paralizante"):
@@ -165,3 +159,17 @@ def dibujar_grid(pantalla, state, agente, celda_px, particulas, assets=None, deb
         x += item_w
 
     pantalla.set_clip(None)
+
+
+def _draw_agent_fallback(pantalla, agente, celda_px):
+    """Dibuja el agente como círculo con glow cuando no hay sprite disponible."""
+    ax = agente.x * celda_px + celda_px // 2
+    ay = agente.y * celda_px + celda_px // 2
+    r  = celda_px // 2
+    glow_surf = pygame.Surface((r * 6, r * 6), pygame.SRCALPHA)
+    pygame.draw.circle(glow_surf, (80, 160, 255, 45), (r * 3, r * 3), r * 3)
+    pygame.draw.circle(glow_surf, (80, 160, 255, 70), (r * 3, r * 3), r * 2)
+    pantalla.blit(glow_surf, (ax - r * 3, ay - r * 3))
+    pygame.draw.circle(pantalla, (200, 220, 255), (ax, ay), r)
+    pygame.draw.circle(pantalla, ( 60, 130, 255), (ax, ay), r - 2)
+    pygame.draw.circle(pantalla, (180, 210, 255), (ax, ay), r // 2)
