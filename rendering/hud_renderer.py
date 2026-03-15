@@ -39,15 +39,15 @@ class HUDLayout:
 
 
 # ── Constantes de layout ───────────────────────────────────────────────────────
-# Sumas de altura: 46+76+56+164+130+72+96+62 = 702 + gaps(70) + start(8) = 780
+# Sumas de altura: 46+76+56+144+134+74+100+72 = 702 + gaps(70) + start(8) = 780
 _H_HEADER    = 46
 _H_SEASON    = 76
 _H_EVENT     = 56
-_H_AGENT     = 164
-_H_GENETICS  = 130
-_H_EVOLUTION = 72
-_H_CROPS     = 96
-_H_SIM       = 62
+_H_AGENT     = 144   # reducido 20px (espacio muerto eliminado)
+_H_GENETICS  = 134   # +4
+_H_EVOLUTION = 74    # +2
+_H_CROPS     = 100   # +4
+_H_SIM       = 72    # +10 (era muy apretado)
 
 # Espaciado interno de tarjetas
 _PAD        = 12   # padding izq/der/top de cada tarjeta
