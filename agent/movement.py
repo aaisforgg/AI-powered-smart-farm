@@ -75,57 +75,52 @@ class Movement:
                 break
 
     def explore(self, agent, grid):
-
         rows = len(grid)
         cols = len(grid[0])
 
-        directions = [
-            agent.dir,        # seguir igual
-            (1,0),(-1,0),(0,1),(0,-1)
-        ]
+        # Si la dirección actual no es cardinal, descartarla
+        if agent.dir in self.CARDINAL:
+            directions = [agent.dir] + self.CARDINAL
+        else:
+            directions = list(self.CARDINAL)
 
-        # quitar duplicados
+        # Quitar duplicados manteniendo orden
         directions = list(dict.fromkeys(directions))
 
-        # aleatoriedad controlada por el gen exploration_rate
+        # Gen de exploración: a veces baraja las direcciones
         exploration_rate = getattr(agent.genes, 'exploration_rate', 0.3)
         if random.random() < exploration_rate:
             random.shuffle(directions)
 
-# ---------- Buscar tiles no visitados ----------
+        # Primero intentar tiles NO visitados
         for dx, dy in directions:
-
             nx = agent.x + dx
             ny = agent.y + dy
 
-            if 0 <= nx < cols and 0 <= ny < rows:
+            if not (0 <= nx < cols and 0 <= ny < rows):
+                continue
+            if not grid[ny][nx].walkable:
+                continue
+            if (nx, ny) in agent.memory["visited_tiles"]:
+                continue
 
-                if not grid[ny][nx].walkable:
-                    continue
+            agent.x = nx
+            agent.y = ny
+            agent.dir = (dx, dy)
+            return
 
-                if (nx, ny) in agent.memory["visited_tiles"]:
-                    continue
+        # Si todo fue visitado, moverse a cualquier tile caminable
+        for dx, dy in directions:
+            nx = agent.x + dx
+            ny = agent.y + dy
 
-                agent.x = nx
-                agent.y = ny
+            if not (0 <= nx < cols and 0 <= ny < rows):
+                continue
+            if not grid[ny][nx].walkable:
+                continue
 
-                agent.dir = (dx, dy)
-
-                return
+            agent.x = nx
+            agent.y = ny
+            agent.dir = (dx, dy)
             
-    # ---------- Si todo fue visitado ----------
-        for dx, dy in directions:
-
-            nx = agent.x + dx
-            ny = agent.y + dy
-
-            if 0 <= nx < cols and 0 <= ny < rows:
-
-                if not grid[ny][nx].walkable:
-                    continue
-
-                agent.x = nx
-                agent.y = ny
-                agent.dir = (dx, dy)
-
-                return
+            return

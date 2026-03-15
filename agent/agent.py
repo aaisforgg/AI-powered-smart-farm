@@ -214,19 +214,13 @@ class Agent:
             self.movement.explore(self, state.grid)
 
     def _execute_strategy(self, state):
-
-        if not self.goal:
+        """Ejecuta la acción planeada sobre el crop objetivo."""
+        if not self.goal or not self.strategy:
             return
 
         crop = self.goal
 
-        # Recalcular por si el estado del crop cambió desde que se planificó
-        from .strategies import StrategyManager
-        strategy = StrategyManager().choose_strategy(state, crop)
-    
-        if strategy is None:
-            return
-
+        # Registrar en memoria
         self.memory["episodes"].append({
             "pos": (self.x, self.y),
             "action": self.strategy,
@@ -234,7 +228,8 @@ class Agent:
         })
         self.memory["last_actions"].append((self.strategy, crop.pos))
 
-        print(f"[Agent] Ejecutando '{self.strategy}' en {crop.pos} | humedad={crop.humedad:.1f} fase={crop.fase}")
+        print(f"[Agent] Ejecutando '{self.strategy}' en {crop.pos} | "
+              f"humedad={crop.humedad:.1f} fase={crop.fase}")
 
         if self.strategy == "WATER":
             crop.humedad = min(100.0, crop.humedad + 50.0)
@@ -249,6 +244,57 @@ class Agent:
             print(f"[Agent] Cosechado {crop.pos} | inventario: {len(state.farmer_inventory)}")
             if crop.pos in self.memory["known_crops"]:
                 del self.memory["known_crops"][crop.pos]
+
+    def _centralize_path(self, path, grid):
+        """Ajusta el path para alejarse de obstáculos SIN crear diagonales."""
+        if not path:
+            return path
+
+        rows = len(grid)
+        cols = len(grid[0])
+
+        # El primer nodo no se toca
+        new_path = [path[0]]
+
+        for i in range(1, len(path)):
+            x, y = path[i]
+            prev = new_path[-1]  # El nodo anterior YA ajustado
+
+            best = (x, y)
+            best_score = -999
+
+            # Probar el nodo original y sus vecinos cardinales
+            for dx, dy in [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)]:
+                nx = x + dx
+                ny = y + dy
+
+                if not (0 <= nx < cols and 0 <= ny < rows):
+                    continue
+                if not grid[ny][nx].walkable:
+                    continue
+
+                # CLAVE: el candidato DEBE ser adyacente cardinal al nodo previo
+                distancia_al_previo = abs(nx - prev[0]) + abs(ny - prev[1])
+                if distancia_al_previo != 1:
+                    continue
+
+                # Puntuar: preferir tiles lejos de obstáculos
+                score = 0
+                for ax, ay in [(-1,0),(1,0),(0,-1),(0,1),(-1,-1),(1,-1),(-1,1),(1,1)]:
+                    ox, oy = nx + ax, ny + ay
+                    if 0 <= ox < cols and 0 <= oy < rows:
+                        if not grid[oy][ox].walkable:
+                            score -= 2
+                        else:
+                            score += 1
+
+                if score > best_score:
+                    best_score = score
+                    best = (nx, ny)
+
+            new_path.append(best)
+
+        return new_path
 
     def _find_unvisited_target(self, grid):
 
