@@ -2,7 +2,6 @@ import sys
 import pygame
 import random
 
-from core.debug import print_tick
 from world.farm_grid import MAP_DATA, TILE_TYPES
 from world.node import Node
 from core.state import GameState
@@ -16,17 +15,15 @@ from simulation.event_manager import EventManager
 
 DEBUG_MODE = "--debug" in sys.argv
 
-# ── Layout ────────────────────────────────────────────────────────────────────
 CELDA_PX  = 12
 GRID_COLS = 80
 GRID_ROWS = 65
-GRID_W    = GRID_COLS * CELDA_PX   # 960
-GRID_H    = GRID_ROWS * CELDA_PX   # 780
+GRID_W    = GRID_COLS * CELDA_PX
+GRID_H    = GRID_ROWS * CELDA_PX
 HUD_W     = 290
-WINDOW_W  = GRID_W + HUD_W         # 1250
-WINDOW_H  = GRID_H                 # 780
+WINDOW_W  = GRID_W + HUD_W
+WINDOW_H  = GRID_H
 
-# ── Paleta de tiles ───────────────────────────────────────────────────────────
 COLORES = {
     "pasto":      (118, 186,  27),
     "agua":       ( 74, 163, 223),
@@ -62,7 +59,6 @@ EVENT_TINTS = {
     "plaga_de_insectos":  (  0, 180,   0,  80),
 }
 
-# ── Paleta HUD ────────────────────────────────────────────────────────────────
 C = {
     "bg":           ( 10,  12,  28),
     "panel":        ( 18,  22,  48),
@@ -86,13 +82,6 @@ SEASON_COLORS = {
     "Invierno":  (150, 200, 255),
 }
 
-SEASON_ICONS = {
-    "Primavera": "☀",
-    "Verano":    "🌞",
-    "Otoño":     "🍂",
-    "Invierno":  "❄",
-}
-
 EVENT_COLORS = {
     "sequia":             (220, 100,  40),
     "tormenta":           (100, 120, 255),
@@ -114,14 +103,6 @@ GOAL_LABELS = {
     None:       "—",
 }
 
-ENERGY_LABELS = {
-    # (min_pct, label, color_key)
-    0.75: ("Alta",     "energy_hi"),
-    0.40: ("Normal",   "energy_mid"),
-    0.20: ("Baja",     "energy_mid"),
-    0.00: ("Muy baja", "energy_lo"),
-}
-
 EVENT_LABELS = {
     "sequia":             "Sequía",
     "tormenta":           "Tormenta",
@@ -137,7 +118,6 @@ CROP_PHASE_LABELS = {0: "Semilla", 1: "Creciendo", 2: "Lista"}
 CROP_PHASE_COLORS = {0: (180, 140, 20), 1: (80, 200, 80), 2: (255, 80, 80)}
 
 
-# ── Utilidades de carga ───────────────────────────────────────────────────────
 def cargar_mapa_logico():
     grid = []
     for y, fila in enumerate(MAP_DATA):
@@ -167,11 +147,10 @@ def spawn_crops():
         Crop(55, 42),
         Crop(22, 45),
         Crop(25, 50),
-        Crop(62, 58),
+        Crop(35, 45),
     ]
 
 
-# ── Partículas ────────────────────────────────────────────────────────────────
 class Particle:
     def __init__(self, ancho, alto):
         self.ancho = ancho
@@ -189,9 +168,7 @@ class Particle:
             self.reset()
 
 
-# ── Helpers de dibujo HUD ─────────────────────────────────────────────────────
 def _card(surf, x, y, w, h, radius=6):
-    """Dibuja un card con fondo y borde redondeado."""
     pygame.draw.rect(surf, C["card"],        (x, y, w, h), border_radius=radius)
     pygame.draw.rect(surf, C["card_border"], (x, y, w, h), 1, border_radius=radius)
 
@@ -204,27 +181,21 @@ def _label(surf, fuentes, text, x, y, color, size="sm"):
 
 
 def _bar(surf, x, y, w, h, pct, color_hi, color_lo, color_mid=None):
-    """Barra de progreso. pct en [0, 1]."""
     pct = max(0.0, min(1.0, pct))
-    # track
     pygame.draw.rect(surf, C["divider"], (x, y, w, h), border_radius=3)
     if pct > 0:
         fill_w = max(2, int(w * pct))
         color = color_hi if pct > 0.5 else (color_mid or color_lo) if pct > 0.25 else color_lo
         pygame.draw.rect(surf, color, (x, y, fill_w, h), border_radius=3)
-    # borde sutil
     pygame.draw.rect(surf, C["card_border"], (x, y, w, h), 1, border_radius=3)
 
 
 def _section_title(surf, fuentes, text, x, y, w):
-    """Línea de título de sección con separador."""
     _label(surf, fuentes, text, x, y, C["txt_dim"], "xs")
     pygame.draw.line(surf, C["divider"], (x, y + 14), (x + w, y + 14), 1)
 
 
-# ── Dibujo del GRID ───────────────────────────────────────────────────────────
 def dibujar_grid(pantalla, state, agente, celda_px, particulas):
-    # Clip para que el tint no se pase al panel HUD
     pantalla.set_clip((0, 0, GRID_W, GRID_H))
 
     for fila in state.grid:
@@ -251,7 +222,6 @@ def dibujar_grid(pantalla, state, agente, celda_px, particulas):
         pygame.draw.rect(pantalla, color,
             (cx * celda_px + 2, cy * celda_px + 2, celda_px - 4, celda_px - 4))
 
-    # Agente: glow + círculo principal
     ax = agente.x * celda_px + celda_px // 2
     ay = agente.y * celda_px + celda_px // 2
     r  = celda_px // 2
@@ -263,7 +233,6 @@ def dibujar_grid(pantalla, state, agente, celda_px, particulas):
     pygame.draw.circle(pantalla, ( 60, 130, 255), (ax, ay), r - 2)
     pygame.draw.circle(pantalla, (180, 210, 255), (ax, ay), r // 2)
 
-    # Partículas
     if season == "Invierno" or event_name in ("tormenta", "nevada", "nevada_paralizante"):
         p_color = (240, 240, 255) if season == "Invierno" else (80, 80, 200)
         for p in particulas:
@@ -273,30 +242,16 @@ def dibujar_grid(pantalla, state, agente, celda_px, particulas):
     pantalla.set_clip(None)
 
 
-# ── Dibujo del HUD ────────────────────────────────────────────────────────────
-def _energy_label(pct):
-    """Devuelve (texto, color_key) según el porcentaje de energía."""
-    if pct >= 0.75:
-        return "Alta",     "energy_hi"
-    if pct >= 0.40:
-        return "Normal",   "energy_mid"
-    if pct >= 0.20:
-        return "Baja",     "energy_mid"
-    return "Muy baja", "energy_lo"
-
-
 def dibujar_hud(pantalla, state, agente, fuentes):
     px  = GRID_W + 10
     pw  = HUD_W - 20
     pad = 10
 
-    # Fondo panel
     pygame.draw.rect(pantalla, C["bg"], (GRID_W, 0, HUD_W, WINDOW_H))
     pygame.draw.line(pantalla, C["card_border"], (GRID_W, 0), (GRID_W, WINDOW_H), 1)
 
     gen_num = agente.evolution.generation
 
-    # ── Header ──────────────────────────────────────────────────────────────
     _card(pantalla, px, 10, pw, 44, radius=8)
     _label(pantalla, fuentes, "AI SMART FARM", px + pad, 20, C["accent"], "md")
     _label(pantalla, fuentes, "Simulación autonoma", px + pad, 36, C["txt_dim"], "xs")
@@ -304,11 +259,10 @@ def dibujar_hud(pantalla, state, agente, fuentes):
     gen_w   = fuentes["xs"].size(gen_txt)[0]
     _label(pantalla, fuentes, gen_txt, px + pw - pad - gen_w, 22, C["txt_dim"], "xs")
 
-    cy = 66  # cursor y
+    cy = 66
 
-    # ── Estación (86px) ───────────────────────────────────────────────────────
-    season    = getattr(state, "season", "—")
-    s_color   = SEASON_COLORS.get(season, C["txt_mid"])
+    season  = getattr(state, "season", "—")
+    s_color = SEASON_COLORS.get(season, C["txt_mid"])
     _card(pantalla, px, cy, pw, 86, radius=6)
     _section_title(pantalla, fuentes, "ESTACIÓN", px + pad, cy + pad, pw - pad * 2)
     _label(pantalla, fuentes, season, px + pad, cy + 34, s_color, "sm")
@@ -316,13 +270,10 @@ def dibujar_hud(pantalla, state, agente, fuentes):
     if day_in_season and hasattr(day_in_season, "days_passed"):
         dp  = day_in_season.days_passed
         dps = day_in_season.days_per_season
-        _bar(pantalla, px + pad, cy + 56, pw - pad * 2, 10,
-             dp / dps, s_color, s_color)
-        _label(pantalla, fuentes, f"Día {dp} de {dps}", px + pad, cy + 72,
-               C["txt_dim"], "xs")
+        _bar(pantalla, px + pad, cy + 56, pw - pad * 2, 10, dp / dps, s_color, s_color)
+        _label(pantalla, fuentes, f"Día {dp} de {dps}", px + pad, cy + 72, C["txt_dim"], "xs")
     cy += 96
 
-    # ── Evento (86px) ─────────────────────────────────────────────────────────
     event_name = state.active_effects.get("event_name", "")
     evt_label  = event_name.replace("_", " ").capitalize() if event_name else "Despejado"
     evt_color  = EVENT_COLORS.get(event_name, C["accent2"]) if event_name else C["txt_mid"]
@@ -332,9 +283,8 @@ def dibujar_hud(pantalla, state, agente, fuentes):
     _label(pantalla, fuentes, evt_label, px + pad + 18, cy + 44, evt_color, "sm")
     cy += 96
 
-    # ── Agente (138px) ────────────────────────────────────────────────────────
     energy_pct = agente.energy / max(agente.max_energy, 1)
-    goal_str   = GOAL_LABELS.get(agente.goal, str(agente.goal) if agente.goal else "—")
+    goal_str   = GOAL_LABELS.get(agente.strategy, str(agente.strategy) if agente.strategy else "—")
     _card(pantalla, px, cy, pw, 138, radius=6)
     _section_title(pantalla, fuentes, "AGENTE", px + pad, cy + pad, pw - pad * 2)
     _label(pantalla, fuentes, "Pos",  px + pad, cy + 32, C["txt_dim"], "xs")
@@ -348,18 +298,13 @@ def dibujar_hud(pantalla, state, agente, fuentes):
     _bar(pantalla, px + pad + 52, cy + 74, pw - pad * 2 - 52, 12,
          energy_pct, C["energy_hi"], C["energy_lo"], C["energy_mid"])
     pct_txt = f"{int(energy_pct * 100)}%"
-    _label(pantalla, fuentes, pct_txt, px + pw - pad - fuentes["xs"].size(pct_txt)[0], cy + 76,
-           C["txt_mid"], "xs")
-    _label(pantalla, fuentes, f"{agente.energy:.0f} / {agente.max_energy:.0f}",
-           px + pad, cy + 100, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, pct_txt, px + pw - pad - fuentes["xs"].size(pct_txt)[0], cy + 76, C["txt_mid"], "xs")
+    _label(pantalla, fuentes, f"{agente.energy:.0f} / {agente.max_energy:.0f}", px + pad, cy + 100, C["txt_dim"], "xs")
     cosechas = agente.life_stats.get("harvests", 0)
-    _label(pantalla, fuentes, f"Cosechas:  {cosechas}",
-           px + pw // 2, cy + 100, C["txt_dim"], "xs")
+    _label(pantalla, fuentes, f"Cosechas:  {cosechas}", px + pw // 2, cy + 100, C["txt_dim"], "xs")
     cy += 148
 
-    # ── Genética (144px) ──────────────────────────────────────────────────────
-    g       = agente.genes
-    gen_num = agente.evolution.generation
+    g = agente.genes
     _card(pantalla, px, cy, pw, 144, radius=6)
     _section_title(pantalla, fuentes, f"GENÉTICA  —  Gen {gen_num}", px + pad, cy + pad, pw - pad * 2)
     stats = [
@@ -379,7 +324,6 @@ def dibujar_hud(pantalla, state, agente, fuentes):
         _bar(pantalla, bx, by + 16, col_w - 8, 8, 0.5, C["accent"], C["accent"], None)
     cy += 154
 
-    # ── Cultivos (122px) ──────────────────────────────────────────────────────
     fase_counts = {0: 0, 1: 0, 2: 0}
     for crop in state.crops:
         fase_counts[crop.fase] = fase_counts.get(crop.fase, 0) + 1
@@ -400,7 +344,6 @@ def dibujar_hud(pantalla, state, agente, fuentes):
                  cnt / total, CROP_PHASE_COLORS[fase], CROP_PHASE_COLORS[fase])
     cy += 132
 
-    # ── Simulación (78px) ─────────────────────────────────────────────────────
     _card(pantalla, px, cy, pw, 78, radius=6)
     _section_title(pantalla, fuentes, "SIMULACIÓN", px + pad, cy + pad, pw - pad * 2)
     _label(pantalla, fuentes, "Tick", px + pad, cy + 32, C["txt_dim"], "xs")
@@ -409,7 +352,6 @@ def dibujar_hud(pantalla, state, agente, fuentes):
     _label(pantalla, fuentes, "10 t/s", px + pw // 2 + 28, cy + 32, C["txt_mid"], "sm")
 
 
-# ── Función de dibujo principal ───────────────────────────────────────────────
 def dibujar(pantalla, state, agente, celda_px, particulas, fuentes):
     pantalla.fill(C["bg"])
     dibujar_grid(pantalla, state, agente, celda_px, particulas)
@@ -426,8 +368,8 @@ def main():
     spawn_x, spawn_y = posicion_random_valida(mundo)
     print(f"Spawn del agente: ({spawn_x}, {spawn_y})")
 
-    agente    = Agent(spawn_x, spawn_y, crop_factory=spawn_crops)
-    crops     = spawn_crops()
+    agente     = Agent(spawn_x, spawn_y, crop_factory=spawn_crops)
+    crops      = spawn_crops()
     season_mgr = SeasonManager(days_per_season=30)
     event_mgr  = EventManager()
 
@@ -456,8 +398,7 @@ def main():
     }
 
     particulas = [Particle(GRID_W, GRID_H) for _ in range(120)]
-
-    clock     = pygame.time.Clock()
+    clock      = pygame.time.Clock()
     ejecutando = True
 
     while ejecutando:
@@ -465,8 +406,6 @@ def main():
             if evento.type == pygame.QUIT:
                 ejecutando = False
         pipeline.run(state)
-        if DEBUG_MODE:
-            print_tick(state, agente)
         dibujar(pantalla, state, agente, CELDA_PX, particulas, fuentes)
         clock.tick(10)
 
