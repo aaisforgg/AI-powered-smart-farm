@@ -38,7 +38,7 @@ class Agent:
 
         self.energy = self.genes.energy_max
         self.max_energy = self.genes.energy_max
-        self.energy_threshold = self.genes.energy_max * 0.25
+        self.energy_threshold = self.genes.energy_max * 0.15
         self.energy_recovery = 4.0
         self.resting = False
 
