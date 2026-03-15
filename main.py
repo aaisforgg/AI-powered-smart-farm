@@ -58,7 +58,7 @@ def main():
     pantalla = pygame.display.set_mode((WINDOW_W, WINDOW_H))
     pygame.display.set_caption("AI Smart Farm")
 
-    assets = AssetManager(cell_size=CELDA_PX)
+    assets = AssetManager(cell_size=CELDA_PX, grid_w=GRID_W, grid_h=GRID_H)
     assets.load_all()
 
     mundo = cargar_mapa_logico()
