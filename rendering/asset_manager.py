@@ -108,8 +108,9 @@ class AssetManager:
                 self._maps[season] = surface
                 print(f"[Assets] Mapa '{season}' cargado desde '{loaded_from}'")
 
-        overlay = self._try_load_map("assets/map_overlay.png", target, alpha=True)
+        overlay = self._try_load_map("assets/map_overlay.png", target, alpha=False)
         if overlay is not None:
+            overlay.set_alpha(160)   # semi-transparente: mapa estacional visible debajo
             self._map_overlay = overlay
 
     def _try_load_map(self, path, target, alpha=False):
