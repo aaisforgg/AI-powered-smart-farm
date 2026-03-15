@@ -90,30 +90,36 @@ class AssetManager:
             pass
 
     def _load_maps(self):
+        # Archivo ideal por estación. Primavera tiene fallback a map_verano si no existe.
         map_files = {
-            "Primavera": "assets/map_verano.jpeg",   # base verde, tint primavera encima
-            "Verano":    "assets/map_verano.jpeg",
-            "Otoño":     "assets/map_otoño.jpeg",
-            "Invierno":  "assets/map_invierno.jpeg",
+            "Primavera": ("assets/map_primavera.jpeg", "assets/map_verano.jpeg"),
+            "Verano":    ("assets/map_verano.jpeg",    None),
+            "Otoño":     ("assets/map_otoño.jpeg",     None),
+            "Invierno":  ("assets/map_invierno.jpeg",  None),
         }
         target = (self.grid_w, self.grid_h)
-        for season, path in map_files.items():
-            try:
-                img = pygame.image.load(path)
-                try:
-                    img = img.convert()
-                except pygame.error:
-                    pass  # sin display activo, usa Surface sin convertir
-                self._maps[season] = pygame.transform.scale(img, target)
-            except (FileNotFoundError, pygame.error):
-                pass
+        for season, (path, fallback) in map_files.items():
+            surface = self._try_load_map(path, target)
+            loaded_from = path
+            if surface is None and fallback:
+                surface = self._try_load_map(fallback, target)
+                loaded_from = fallback
+            if surface is not None:
+                self._maps[season] = surface
+                print(f"[Assets] Mapa '{season}' cargado desde '{loaded_from}'")
 
+        overlay = self._try_load_map("assets/map_overlay.png", target, alpha=True)
+        if overlay is not None:
+            self._map_overlay = overlay
+
+    def _try_load_map(self, path, target, alpha=False):
+        """Carga y escala una imagen. Retorna Surface o None si falla."""
         try:
-            img = pygame.image.load("assets/map_overlay.png")
+            img = pygame.image.load(path)
             try:
-                img = img.convert_alpha()
+                img = img.convert_alpha() if alpha else img.convert()
             except pygame.error:
-                pass
-            self._map_overlay = pygame.transform.scale(img, target)
+                pass  # sin display activo
+            return pygame.transform.scale(img, target)
         except (FileNotFoundError, pygame.error):
-            pass
+            return None
