@@ -1,17 +1,21 @@
-WIDTH = 80
-HEIGHT = 65
+# Configuración de las dimensiones del mapa
+WIDTH = 80   # Ancho: 80 celdas
+HEIGHT = 65  # Alto: 65 celdas
 
+# Diccionario de referencia para los tipos de terreno (ID -> Nombre)
 TILE_TYPES = {
-    0: "pasto",
-    1: "agua",
-    2: "acantilado",
-    3: "edificio",
-    4: "cultivo",
-    5: "puente",
-    6: "puerta",
-    7: "casa"
+    0: "pasto",       # Caminable, costo bajo
+    1: "agua",        # Obstáculo o requiere puente
+    2: "acantilado",  # Obstáculo infranqueable
+    3: "edificio",    # Paredes/Estructura externa
+    4: "cultivo",     # Terreno especial (puntos de interés)
+    5: "puente",      # Permite cruzar sobre el agua
+    6: "puerta",      # Punto de entrada/interior
+    7: "casa"         # Interior de vivienda
 }
 
+# Inicialización de la matriz del mapa (MAP_DATA)
+# Se definen manualmente las primeras 37 filas para dar forma al terreno inicial
 MAP_DATA = [
     #1, 2, 3, 4, 5, 6, 7, 8, 9, 10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80
     [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
@@ -111,9 +115,12 @@ MAP_DATA = [
     [0]*80
 ]
 
-# -----------------------
-# acantilados
-# -----------------------
+# ---------------------------------------------------------
+# GENERACIÓN DE ESTRUCTURAS MEDIANTE BUCLES
+# ---------------------------------------------------------
+
+# --- Sección: ACANTILADOS (Tipo 2) ---
+# Crea los bordes del mapa para que el personaje no se salga
 for y in range(HEIGHT):
     for x in range(WIDTH):
         if x == 0 or x == WIDTH-1 or y == 0 or y == HEIGHT-1:
@@ -205,9 +212,8 @@ for y in range(59,65):
     for x in range(70,73):
         MAP_DATA[y][x] = 2
         
-# -----------------------
-# río
-# -----------------------
+# --- Sección: RÍO (Tipo 1) ---
+# El río fluye de forma sinuosa a través del mapa
 for x in range(41,46):
     MAP_DATA[37][x] = 1
 
@@ -280,9 +286,8 @@ for y in range(56,59):
     for x in range(9,11):
         MAP_DATA[y][x] = 1
     
-# -----------------------
-# puente
-# -----------------------
+# --- Sección: PUENTES (Tipo 5) ---
+# Colocación de puentes sobre las coordenadas donde hay agua (Tipo 1)
 for x in range(44,48):
     MAP_DATA[44][x] = 5
     
@@ -294,17 +299,16 @@ for y in range(47,50):
     for x in range(62,65):
         MAP_DATA[y][x] = 5
 
-# -----------------------
-# edificio
-# -----------------------
+# --- Sección: EDIFICIOS (Tipo 3 y 6) ---
+# Crea una estructura con paredes (3) y un interior (6)
 for y in range(36,41):
     for x in range(5,12):
 
-        # paredes
+        # Paredes exteriores
         if y == 36 or y == 40 or x == 5 or x == 11:
             MAP_DATA[y][x] = 3
 
-        # interior
+        # Piso interior y puertas
         else:
             MAP_DATA[y][x] = 6
             
@@ -312,9 +316,8 @@ MAP_DATA[40][6] = 6
 MAP_DATA[40][9] = 6  
 MAP_DATA[40][10] = 6    
 
-# -----------------------
-# cultivo
-# -----------------------
+# --- Sección: CULTIVOS (Tipo 4) ---
+# Áreas de granja distribuidas cerca del río
 for y in range(37,51):
     for x in range(32,42):
         MAP_DATA[y][x] = 4   
@@ -375,104 +378,36 @@ MAP_DATA[44][69] = 4
 MAP_DATA[41][73] = 4
 MAP_DATA[44][73] = 4
 
-# WIDTH = 80
-# HEIGHT = 72
-
-# TILE_TYPES = {
-#     0: "pasto",
-#     1: "agua",
-#     2: "acantilado",
-#     3: "edificio",
-#     4: "cultivo",
-#     5: "puente",
-#     6: "puerta",
-#     7: "casa"
-# }
-
-# # crear mapa vacío
-# MAP_DATA = [[0 for _ in range(WIDTH)] for _ in range(HEIGHT)]
-
-
-# # -----------------------
-# # acantilados
-# # -----------------------
-# for y in range(HEIGHT):
-#     for x in range(WIDTH):
-#         if x == 0 or x == WIDTH-1 or y == 0 or y == HEIGHT-1:
-#             MAP_DATA[y][x] = 2
-
-# for y in range(0,6):
-#     for x in range(0,12):
-#         MAP_DATA[y][x] = 2
-
-# for y in range(1,6):
-#     for x in range(19,80):
-#         MAP_DATA[y][x] = 2
-        
-# # -----------------------
-# # pasto
-# # -----------------------
-# for y in range(0,5):
-#     for x in range(12,15):
-#         MAP_DATA[y][x] = 0
-
-# # -----------------------
-# # río
-# # -----------------------
-# for y in range(0,1):
-#     for x in range(15,18):
-#         MAP_DATA[y][x] = 1
-
-# for y in range(1,6):
-#     for x in range(15,19):
-#         MAP_DATA[y][x] = 1
-
-# # -----------------------
-# # puente
-# # -----------------------
-# for y in range(13,18):
-#     for x in range(8,10):
-#         MAP_DATA[y][x] = 5
-
-
-# # -----------------------
-# # edificio
-# # -----------------------
-# for y in range(7,14):
-#     for x in range(21,28):
-
-#         # paredes
-#         if y == 7 or y == 13 or x == 21 or x == 27:
-#             MAP_DATA[y][x] = 3
-
-#         # interior
-#         else:
-#             MAP_DATA[y][x] = 6
-
-
-# # -----------------------
-# # cultivo
-# # -----------------------
-# for y in range(20,23):
-#     for x in range(10,13):
-#         MAP_DATA[y][x] = 4
-
-
-
+# ---------------------------------------------------------
+# LÓGICA DE NAVEGACIÓN (Clase FarmGrid)
+# ---------------------------------------------------------
 class FarmGrid:
+    """
+    Clase encargada de gestionar la lógica de movimiento sobre la rejilla.
+    """
     def __init__(self, grid):
+        # Recibe una rejilla de objetos 'Node' (se asume que MAP_DATA se convirtió a objetos previamente)
         self.grid = grid
 
     def get_neighbors(self, x, y):
-        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+        """
+        Calcula las celdas adyacentes (Norte, Sur, Este, Oeste) que son transitables.
+        """
+        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]# Movimientos ortogonales
         neighbors = []
         for dx, dy in directions:
             nx, ny = x + dx, y + dy
+            # Verifica que el vecino esté dentro de los límites del mapa
             if 0 <= nx < WIDTH and 0 <= ny < HEIGHT:
                 node = self.grid[ny][nx]
+                # Solo añade el vecino si la propiedad 'walkable' es True
                 if node.walkable:
                     neighbors.append(node)
         return neighbors
 
     def get_cost(self, x, y):
+        """
+        Obtiene el costo de movimiento de una celda específica.
+        Útil para algoritmos de búsqueda de caminos (Pathfinding).
+        """
         return self.grid[y][x].cost

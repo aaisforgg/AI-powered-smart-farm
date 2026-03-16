@@ -24,7 +24,7 @@ def _gene_pct(value, gene_name):
 class HUDLayout:
     """Apila secciones verticalmente con padding automático."""
 
-    def __init__(self, x, width, start_y=8, gap=10):
+    def __init__(self, x, width, start_y=8, gap=8):
         self.x   = x
         self.w   = width
         self.y   = start_y
@@ -61,8 +61,14 @@ def dibujar_hud(pantalla, state, agente, fuentes):
     pw  = HUD_W - 20
     pad = _PAD
 
-    pygame.draw.rect(pantalla, C["bg"], (GRID_W, 0, HUD_W, WINDOW_H))
-    pygame.draw.line(pantalla, C["divider"], (GRID_W, 0), (GRID_W, WINDOW_H), 1)
+    # Fondo estilo Stardew (madera clara)
+    pygame.draw.rect(pantalla, (222, 195, 150), (GRID_W, 0, HUD_W, WINDOW_H))
+    
+    # Borde oscuro tipo marco
+    pygame.draw.rect(pantalla, (120, 85, 50), (GRID_W, 0, HUD_W, WINDOW_H), 4)
+
+    # Línea separadora suave
+    pygame.draw.line(pantalla, (160, 120, 80), (GRID_W, 0), (GRID_W, WINDOW_H), 2)
 
     gen_num = agente.evolution.generation
     layout  = HUDLayout(px, pw)
@@ -129,8 +135,8 @@ def dibujar_hud(pantalla, state, agente, fuentes):
     # Sistema de 2 columnas con offsets fijos para alineación perfecta
     col1_x = ax + pad           # columna izquierda — etiquetas
     col2_x = ax + aw // 2 + 6  # columna derecha — etiquetas
-    val1_x = col1_x + 62        # valores col izquierda (>= ancho de "Cosechas" ~48px)
-    val2_x = col2_x + 44        # valores col derecha  (>= ancho de "Acc." ~26px)
+    val1_x = col1_x + 60       # valores col izquierda (>= ancho de "Cosechas" ~48px)
+    val2_x = col2_x + 60        # valores col derecha  (>= ancho de "Acc." ~26px)
     row_h  = _ROW_H
 
     r0y = ay + 32   # primera fila (tras title+divider+gap)
@@ -149,8 +155,8 @@ def dibujar_hud(pantalla, state, agente, fuentes):
     # Fila 2: Barra de energía (full width)
     bar_row_y = r0y + row_h * 2
     _label(pantalla, fuentes, "Energía", col1_x, bar_row_y, C["txt_dim"], "xs")
-    bar_x = col1_x + 58
-    bar_w = aw - pad * 2 - 58 - 30
+    bar_x = col1_x + 60
+    bar_w = aw - pad * 2 - 90
     _bar(pantalla, bar_x, bar_row_y + 3, bar_w, 10, energy_pct,
          C["energy_hi"], C["energy_lo"], C["energy_mid"])
     pct_txt = f"{int(energy_pct * 100)}%"
@@ -211,9 +217,9 @@ def dibujar_hud(pantalla, state, agente, fuentes):
         trend_col = C["txt_dim"]
 
     evo_col1_x = vx + pad
-    evo_col2_x = vx + vw // 2 + 6
-    evo_val1_x = evo_col1_x + 38
-    evo_val2_x = evo_col2_x + 46
+    evo_col2_x = vx + vw // 2
+    evo_val1_x = evo_col1_x + 50
+    evo_val2_x = evo_col2_x + 50
 
     _card(pantalla, vx, vy, vw, vh, radius=8)
     _section_title(pantalla, fuentes, "EVOLUCIÓN", vx + pad, vy + pad, vw - pad * 2)
@@ -262,8 +268,8 @@ def dibujar_hud(pantalla, state, agente, fuentes):
 
     sim_col1_x = smx + pad
     sim_col2_x = smx + smw // 2 + 6
-    sim_val1_x = sim_col1_x + 32
-    sim_val2_x = sim_col2_x + 38
+    sim_val1_x = sim_col1_x + 50
+    sim_val2_x = sim_col2_x + 50
 
     _card(pantalla, smx, smy, smw, smh, radius=8)
     _section_title(pantalla, fuentes, "SIMULACIÓN", smx + pad, smy + pad, smw - pad * 2)
