@@ -20,13 +20,34 @@ def tick_agent(state):
 
 def tick_crops(state):
     """Crecimiento y secado de todos los cultivos."""
-    dry_multiplier = state.active_effects.get("crop_dry_multiplier", 1.0)
+    dry_multiplier   = state.active_effects.get("crop_dry_multiplier", 1.0)
+    dry_season       = state.active_effects.get("dry_season_multiplier", 1.0)
+    growth           = state.active_effects.get("growth_multiplier", 1.0)
+    growth_bonus     = state.active_effects.get("growth_multiplier_bonus", 1.0)
 
+    total_dry    = dry_multiplier * dry_season
+    total_growth = growth * growth_bonus
+
+    muertos = []
     for crop in state.crops:
         crop.crecer(
             tasa_secado=0.15,
             umbral_crecimiento=20.0,
-            dry_multiplier=dry_multiplier)
+            dry_multiplier=total_dry,
+            growth_multiplier=total_growth,
+        )
+        if crop.muerto:
+            muertos.append(crop)
+
+    for c in muertos:
+        state.crops.remove(c)
+        print(f"[Crop] Cultivo en {c.pos} murió por sequía")
+
+def tick_animals(state):
+    """Actualiza hambre y producción de animales."""
+    for animal in state.animals:
+        animal.actualizar()
+
 
 def tick_season(state):
     """Avanza estaciones. Si hay EventManager, le pasa la estación actual."""

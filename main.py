@@ -6,9 +6,10 @@ from world.farm_grid import MAP_DATA, TILE_TYPES
 from world.node import Node
 from core.state import GameState
 from core.pipeline import Pipeline
-from core.steps import tick_agent, tick_crops, tick_season, tick_events, tick_counter
+from core.steps import tick_agent, tick_crops, tick_animals, tick_season, tick_events, tick_counter
 from agent.agent import Agent
 from entities.crop import Crop
+from entities.animal import Animal
 from simulation.season_manager import SeasonManager
 from simulation.event_manager import EventManager
 from rendering import render_frame
@@ -44,15 +45,8 @@ def posicion_random_valida(grid):
 
 
 def spawn_crops(grid, count=None):
-    """Genera cultivos en posiciones aleatorias de tiles tipo 'cultivo'.
-
-    Distribución de fases:
-      30% fase 0 (semilla)   humedad 80-100
-      40% fase 1 (creciendo) humedad 40-80
-      30% fase 2 (listo)     humedad 20-60
-    """
     if count is None:
-        count = random.randint(8, 12)
+        count = random.randint(12, 18)
 
     cultivo_tiles = [
         (tile.x, tile.y)
@@ -62,7 +56,6 @@ def spawn_crops(grid, count=None):
     ]
 
     if not cultivo_tiles:
-        print("[WARN] spawn_crops: no hay tiles de tipo 'cultivo' en el mapa")
         return []
 
     count = min(count, len(cultivo_tiles))
@@ -71,19 +64,25 @@ def spawn_crops(grid, count=None):
     crops = []
     for x, y in positions:
         c = Crop(x, y)
-        r = random.random()
-        if r < 0.30:
-            c.fase    = 0
-            c.humedad = random.uniform(80, 100)
-        elif r < 0.70:
-            c.fase    = 1
-            c.humedad = random.uniform(40, 80)
-        else:
-            c.fase    = 2
-            c.humedad = random.uniform(20, 60)
+        c.fase = 0
+        c.humedad = 100.0
         crops.append(c)
 
     return crops
+
+
+def spawn_animals(grid, count=3):
+    pasto_tiles = [
+        (tile.x, tile.y)
+        for fila in grid
+        for tile in fila
+        if tile.type_name == "pasto" and tile.walkable
+    ]
+    if not pasto_tiles:
+        return []
+    count = min(count, len(pasto_tiles))
+    positions = random.sample(pasto_tiles, count)
+    return [Animal(x, y) for x, y in positions]
 
 
 def main():
@@ -105,19 +104,21 @@ def main():
     agente        = Agent(spawn_x, spawn_y, crop_factory=spawn_crops)
     agente.debug  = DEBUG_MODE
     crops         = spawn_crops(mundo)
-    event_mgr  = EventManager()
+    animals       = spawn_animals(mundo)
+    event_mgr     = EventManager()
 
     for fila in mundo:
         for nodo in fila:
             if nodo.type_name == "casa":
                 agente.memory["home_tiles"].add((nodo.x, nodo.y))
 
-    season_mgr = SeasonManager(days_per_season=120)
+    season_mgr = SeasonManager()
 
     state = GameState(
         farmer_pos=(agente.x, agente.y),
         grid=mundo,
         crops=crops,
+        animals=animals,
         season=season_mgr.current_season,
         _agent_ref=agente,
         _season_mgr=season_mgr,
@@ -127,6 +128,7 @@ def main():
     pipeline = Pipeline(
         tick_agent,
         tick_crops,
+        tick_animals,
         tick_season,
         tick_events,
         tick_counter,
@@ -139,23 +141,52 @@ def main():
         "xs": pygame.font.SysFont("Segoe UI", 11, bold=False),
     }
 
-    particulas = [Particle(GRID_W, GRID_H) for _ in range(120)]
-    clock      = pygame.time.Clock()
-    ejecutando = True
+    particulas    = [Particle(GRID_W, GRID_H) for _ in range(120)]
+    clock         = pygame.time.Clock()
+    ejecutando    = True
+    paused        = False
+    game_speed    = 10
+    debug_visual  = False
 
     while ejecutando:
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 ejecutando = False
-        pipeline.run(state)
+            elif evento.type == pygame.KEYDOWN:
+                if evento.key == pygame.K_p:
+                    paused = not paused
+                    print(f"[Main] {'Pausado' if paused else 'Reanudado'}")
+                elif evento.key == pygame.K_d:
+                    debug_visual = not debug_visual
+                    print(f"[Main] Debug visual: {'ON' if debug_visual else 'OFF'}")
+                elif evento.key in (pygame.K_PLUS, pygame.K_EQUALS, pygame.K_KP_PLUS):
+                    game_speed = min(60, game_speed + 5)
+                    print(f"[Main] Velocidad: {game_speed} t/s")
+                elif evento.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
+                    game_speed = max(1, game_speed - 5)
+                    print(f"[Main] Velocidad: {game_speed} t/s")
+                elif evento.key == pygame.K_r:
+                    agente = Agent(spawn_x, spawn_y, crop_factory=spawn_crops)
+                    agente.debug = DEBUG_MODE
+                    crops = spawn_crops(mundo)
+                    for fila in mundo:
+                        for nodo in fila:
+                            if nodo.type_name == "casa":
+                                agente.memory["home_tiles"].add((nodo.x, nodo.y))
+                    state.crops = crops
+                    state.animals = spawn_animals(mundo)
+                    state._agent_ref = agente
+                    state.tick = 0
+                    state.generation = 0
+                    state.score = 0
+                    state.active_effects.clear()
+                    print("[Main] Reset completo")
 
-        if len(state.crops) < 3:
-            nuevos = spawn_crops(state.grid, count=5)
-            state.crops.extend(nuevos)
-            print(f"[Main] Repoblando cultivos: +{len(nuevos)} → total {len(state.crops)}")
+        if not paused:
+            pipeline.run(state)
 
-        render_frame(pantalla, state, agente, CELDA_PX, particulas, fuentes, assets)
-        clock.tick(10)
+        render_frame(pantalla, state, agente, CELDA_PX, particulas, fuentes, assets, debug_visual)
+        clock.tick(game_speed)
 
     pygame.quit()
 
