@@ -46,40 +46,40 @@ EVENT_TINTS = {
 }
 
 C = {
-    "bg":           ( 13,  14,  23),   # near-black, blue tint
-    "panel":        ( 18,  20,  34),
-    "card":         ( 25,  28,  48),   # dark blue-grey
-    "card_border":  ( 52,  58,  92),   # subtle, not loud
-    "accent":       (139, 233, 253),   # Dracula cyan
-    "accent2":      ( 80, 250, 123),   # Dracula green
-    "divider":      ( 40,  46,  74),
-    "txt_hi":       (248, 248, 242),   # near-white — max legibility
-    "txt_mid":      (189, 196, 224),   # medium grey-blue
-    "txt_dim":      (130, 142, 182),   # was (80,92,148) — much more readable
-    "energy_hi":    ( 80, 250, 123),   # Dracula green
-    "energy_mid":   (255, 184, 108),   # Dracula orange
-    "energy_lo":    (255,  85,  85),   # Dracula red
+    "bg": (245, 226, 182),        # Fondo crema (se mantiene)
+    "divider": (140, 100, 60),    # Más oscuro para definir mejor los límites
+
+    "accent": (45, 100, 45),      # Verde bosque profundo (en lugar de verde claro)
+    "accent2": (160, 80, 0),      # Ocre quemado para resaltar sobre el crema
+
+    "txt_hi": (40, 25, 15),       # Casi negro/café muy oscuro para máxima lectura
+    "txt_mid": (80, 55, 35),      # Café medio
+    "txt_dim": (110, 85, 65),     # Grisáceo oscuro
+
+    "energy_hi": (30, 130, 50),   # Verde vibrante pero oscuro
+    "energy_mid": (180, 120, 0),  # Ámbar oscuro
+    "energy_lo": (180, 40, 40)    # Rojo sangre para alertar
 }
 
 SEASON_COLORS = {
-    "Primavera": ( 80, 220, 100),
-    "Verano":    (255, 200,  50),
-    "Otoño":     (220, 120,  40),
-    "Invierno":  (150, 200, 255),
+    "Primavera": (30, 150, 60),   # Verde esmeralda
+    "Verano":    (200, 140, 0),   # Dorado oscuro
+    "Otoño":     (160, 60, 20),   # Terracota
+    "Invierno":  (50, 100, 160),  # Azul acero (el azul claro se pierde en crema)
 }
 
 EVENT_COLORS = {
-    "sequia":             (220, 100,  40),
-    "tormenta":           (100, 120, 255),
-    "nevada":             (180, 210, 255),
-    "inundacion":         ( 50, 130, 220),
-    "plaga":              ( 80, 200,  80),
-    "gran_deslave":       (150, 100,  50),
-    "nevada_paralizante": (200, 220, 255),
-    "plaga_de_insectos":  (120, 200,  60),
-    "lluvia_suave":       (100, 180, 255),
-    "sol_ideal":          (255, 220,  80),
-    "cosecha_doble":      (255, 200,  50),
+    "sequia":             (150, 70, 0),    # Café rojizo
+    "tormenta":           (40, 60, 150),   # Azul profundo
+    "nevada":             (80, 120, 160),  # Azul grisáceo
+    "inundacion":         (0, 80, 180),    # Azul fuerte
+    "plaga":              (60, 110, 30),   # Verde oliva oscuro
+    "gran_deslave":       (100, 50, 20),   # Marrón oscuro
+    "nevada_paralizante": (60, 90, 130),   # Azul sombra
+    "plaga_de_insectos":  (80, 130, 20),   # Verde tóxico oscuro
+    "lluvia_suave":       (70, 130, 180),  # Cerúleo
+    "sol_ideal":          (170, 130, 0),   # Mostaza
+    "cosecha_doble":      (180, 90, 0),    # Naranja oscuro
 }
 
 GOAL_LABELS = {
@@ -107,7 +107,11 @@ EVENT_LABELS = {
 }
 
 CROP_PHASE_LABELS = {0: "Semilla", 1: "Creciendo", 2: "Lista"}
-CROP_PHASE_COLORS = {0: (180, 140, 20), 1: (80, 200, 80), 2: (255, 80, 80)}
+CROP_PHASE_COLORS = {
+    0: (100, 70, 20),    # Semilla: Marrón tierra (contrasta con el crema)
+    1: (40, 140, 40),    # Creciendo: Verde medio
+    2: (200, 20, 20)     # Listo: Rojo vibrante (muy fácil de distinguir)
+}
 
 OBSTACLE_COLORS = {
     "nieve":    (200, 230, 255),   # azul hielo claro

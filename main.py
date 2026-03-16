@@ -7,8 +7,10 @@ from world.node import Node
 from core.state import GameState
 from core.pipeline import Pipeline
 from core.steps import tick_agent, tick_crops, tick_animals, tick_season, tick_events, tick_counter
+from core.steps import tick_agent, tick_crops, tick_animals, tick_season, tick_events, tick_counter
 from agent.agent import Agent
 from entities.crop import Crop
+from entities.animal import Animal
 from entities.animal import Animal
 from simulation.season_manager import SeasonManager
 from simulation.event_manager import EventManager
@@ -16,6 +18,7 @@ from rendering import render_frame
 from rendering.asset_manager import AssetManager
 from rendering.theme import WINDOW_W, WINDOW_H, CELDA_PX, GRID_W, GRID_H
 from rendering.particles import Particle
+from ui.start_screen import pantalla_inicio
 
 
 DEBUG_MODE = "--debug" in sys.argv
@@ -47,6 +50,7 @@ def posicion_random_valida(grid):
 def spawn_crops(grid, count=None):
     if count is None:
         count = random.randint(12, 18)
+        count = random.randint(12, 18)
 
     cultivo_tiles = [
         (tile.x, tile.y)
@@ -64,6 +68,8 @@ def spawn_crops(grid, count=None):
     crops = []
     for x, y in positions:
         c = Crop(x, y)
+        c.fase = 0
+        c.humedad = 100.0
         c.fase = 0
         c.humedad = 100.0
         crops.append(c)
@@ -85,8 +91,30 @@ def spawn_animals(grid, count=3):
     return [Animal(x, y) for x, y in positions]
 
 
+def spawn_animals(grid, count=3):
+    pasto_tiles = [
+        (tile.x, tile.y)
+        for fila in grid
+        for tile in fila
+        if tile.type_name == "pasto" and tile.walkable
+    ]
+    if not pasto_tiles:
+        return []
+    count = min(count, len(pasto_tiles))
+    positions = random.sample(pasto_tiles, count)
+    return [Animal(x, y) for x, y in positions]
+
+
 def main():
     pygame.init()
+    pygame.mixer.init()
+    
+    pygame.mixer.music.stop()
+
+    pygame.mixer.music.load("assets/music/menu_music.mp3")
+    pygame.mixer.music.set_volume(0.4)
+    pygame.mixer.music.play(-1)
+
     pantalla = pygame.display.set_mode((WINDOW_W, WINDOW_H))
     pygame.display.set_caption("AI Smart Farm")
 
@@ -106,12 +134,15 @@ def main():
     crops         = spawn_crops(mundo)
     animals       = spawn_animals(mundo)
     event_mgr     = EventManager()
+    animals       = spawn_animals(mundo)
+    event_mgr     = EventManager()
 
     for fila in mundo:
         for nodo in fila:
             if nodo.type_name == "casa":
                 agente.memory["home_tiles"].add((nodo.x, nodo.y))
 
+    season_mgr = SeasonManager()
     season_mgr = SeasonManager()
 
     state = GameState(
@@ -129,6 +160,7 @@ def main():
         tick_agent,
         tick_crops,
         tick_animals,
+        tick_animals,
         tick_season,
         tick_events,
         tick_counter,
@@ -141,6 +173,14 @@ def main():
         "xs": pygame.font.SysFont("Segoe UI", 11, bold=False),
     }
 
+    pantalla_inicio(pantalla, fuentes, WINDOW_W, WINDOW_H)
+    
+    pygame.mixer.music.stop()
+
+    pygame.mixer.music.load("assets/music/game_music.mp3")
+    pygame.mixer.music.set_volume(0.4)
+    pygame.mixer.music.play(-1)
+    
     particulas    = [Particle(GRID_W, GRID_H) for _ in range(120)]
     clock         = pygame.time.Clock()
     ejecutando    = True

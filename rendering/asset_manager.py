@@ -96,7 +96,7 @@ class AssetManager:
     def _load_maps(self):
         # Archivo ideal por estación. Primavera tiene fallback a map_verano si no existe.
         map_files = {
-            "Primavera": ("assets/map_primavera.jpeg", "assets/map_verano.jpeg"),
+            "Primavera": ("assets/map_overlay.png", "assets/map_verano.jpeg"),
             "Verano":    ("assets/map_verano.jpeg",    None),
             "Otoño":     ("assets/map_otoño.jpeg",     None),
             "Invierno":  ("assets/map_invierno.jpeg",  None),
@@ -112,10 +112,10 @@ class AssetManager:
                 self._maps[season] = surface
                 print(f"[Assets] Mapa '{season}' cargado desde '{loaded_from}'")
 
-        overlay = self._try_load_map("assets/map_overlay.png", target, alpha=False)
-        if overlay is not None:
-            overlay.set_alpha(160)   # semi-transparente: mapa estacional visible debajo
-            self._map_overlay = overlay
+        #overlay = self._try_load_map("assets/map_overlay.png", target, alpha=False)
+        # if overlay is not None:
+        #     overlay.set_alpha(160)   # semi-transparente: mapa estacional visible debajo
+        #     self._map_overlay = overlay
 
     def _try_load_map(self, path, target, alpha=False):
         """Carga y escala una imagen. Retorna Surface o None si falla."""

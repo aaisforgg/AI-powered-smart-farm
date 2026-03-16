@@ -3,10 +3,17 @@ import pygame
 from rendering.theme import C
 
 
-def _card(surf, x, y, w, h, radius=8):
-    pygame.draw.rect(surf, C["card"],        (x, y, w, h), border_radius=radius)
-    pygame.draw.rect(surf, C["card_border"], (x, y, w, h), 1, border_radius=radius)
+def _card(surface, x, y, w, h, radius=5):
 
+    # fondo pergamino
+    pygame.draw.rect(surface, (245, 226, 182), (x, y, w, h), border_radius=radius)
+
+    # borde exterior oscuro
+    pygame.draw.rect(surface, (120, 85, 50), (x, y, w, h), 2, border_radius=radius)
+
+    # sombra ligera abajo
+    pygame.draw.line(surface, (200, 170, 120), (x+2, y+h-2), (x+w-2, y+h-2), 1)
+    
 
 def _label(surf, fuentes, text, x, y, color, size="sm"):
     f = fuentes[size]
@@ -25,6 +32,29 @@ def _bar(surf, x, y, w, h, pct, color_hi, color_lo, color_mid=None):
         pygame.draw.rect(surf, color, (x, y, fill_w, h), border_radius=4)
 
 
-def _section_title(surf, fuentes, text, x, y, w):
-    _label(surf, fuentes, text, x, y, C["txt_mid"], "xs")
-    pygame.draw.line(surf, C["divider"], (x, y + 14), (x + w, y + 14), 1)
+def _section_title(surface, fonts, text, x, y, width):
+
+    font = fonts["sm"]
+
+    surf = font.render(text, True, (90, 60, 30))
+    rect = surf.get_rect()
+
+    rect.centerx = x + width // 2
+    rect.y = y
+
+    surface.blit(surf, rect)
+
+    # línea decorativa
+    pygame.draw.line(surface, (170,130,80), (x, y+20), (x+width, y+20), 1)
+    
+def _label_center_x(pantalla, fuentes, texto, x, y, width, color, size="xs"):
+
+    font = fuentes[size]
+
+    surf = font.render(texto, True, color)
+    rect = surf.get_rect()
+
+    rect.centerx = x + width // 2
+    rect.y = y
+
+    pantalla.blit(surf, rect)
