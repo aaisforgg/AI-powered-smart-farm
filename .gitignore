@@ -208,3 +208,9 @@ __marimo__/
 
 #test.py
 test.py
+
+# Claude agent as a code reviewer
+.claude/
+CLAUDE.md
+
+scripts/
