@@ -7,8 +7,10 @@ from world.node import Node
 from core.state import GameState
 from core.pipeline import Pipeline
 from core.steps import tick_agent, tick_crops, tick_animals, tick_season, tick_events, tick_counter
+from core.steps import tick_agent, tick_crops, tick_animals, tick_season, tick_events, tick_counter
 from agent.agent import Agent
 from entities.crop import Crop
+from entities.animal import Animal
 from entities.animal import Animal
 from simulation.season_manager import SeasonManager
 from simulation.event_manager import EventManager
@@ -48,6 +50,7 @@ def posicion_random_valida(grid):
 def spawn_crops(grid, count=None):
     if count is None:
         count = random.randint(12, 18)
+        count = random.randint(12, 18)
 
     cultivo_tiles = [
         (tile.x, tile.y)
@@ -67,9 +70,25 @@ def spawn_crops(grid, count=None):
         c = Crop(x, y)
         c.fase = 0
         c.humedad = 100.0
+        c.fase = 0
+        c.humedad = 100.0
         crops.append(c)
 
     return crops
+
+
+def spawn_animals(grid, count=3):
+    pasto_tiles = [
+        (tile.x, tile.y)
+        for fila in grid
+        for tile in fila
+        if tile.type_name == "pasto" and tile.walkable
+    ]
+    if not pasto_tiles:
+        return []
+    count = min(count, len(pasto_tiles))
+    positions = random.sample(pasto_tiles, count)
+    return [Animal(x, y) for x, y in positions]
 
 
 def spawn_animals(grid, count=3):
@@ -115,12 +134,15 @@ def main():
     crops         = spawn_crops(mundo)
     animals       = spawn_animals(mundo)
     event_mgr     = EventManager()
+    animals       = spawn_animals(mundo)
+    event_mgr     = EventManager()
 
     for fila in mundo:
         for nodo in fila:
             if nodo.type_name == "casa":
                 agente.memory["home_tiles"].add((nodo.x, nodo.y))
 
+    season_mgr = SeasonManager()
     season_mgr = SeasonManager()
 
     state = GameState(
@@ -137,6 +159,7 @@ def main():
     pipeline = Pipeline(
         tick_agent,
         tick_crops,
+        tick_animals,
         tick_animals,
         tick_season,
         tick_events,
