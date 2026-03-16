@@ -3,9 +3,8 @@ from math import dist
 import random
 
 from agent.strategies import StrategyManager
-from core import state
+from core.constants import REST_TICKS_MAX
 from core.debug import debug_tick
-from entities import crop
 from .decision import DecisionSystem
 from .movement import Movement
 from pathfinding.astar import AStarPathfinder
@@ -24,11 +23,18 @@ class Agent:
 
         self.dir = (0, 0)
 
+        self.visual_action = "stationary"
+        self.visual_action_ticks = 0
+
+        self.last_harvest_pos = None
+        self.last_harvest_timer = 0
+
         self.goal = None
         self.strategy = None
 
         self.current_path = deque()
         self.needs_replan = False
+        self.path_failures = 0
 
         self.decision_system = DecisionSystem()
         self.movement = Movement()
@@ -38,9 +44,11 @@ class Agent:
 
         self.energy = self.genes.energy_max
         self.max_energy = self.genes.energy_max
-        self.energy_threshold = 10.0
+        self.energy_threshold = self.genes.energy_max * self.genes.risk_tolerance
         self.energy_recovery = 4.0
         self.resting = False
+        self.rest_ticks = 0
+        self._rest_start_energy = 0.0
 
         self.evolution = EvolutionEngine()
 
@@ -75,6 +83,16 @@ class Agent:
 
     def update(self, state):
         tile = state.grid[self.y][self.x]
+
+        # Decrementar timers visuales
+        if self.visual_action_ticks > 0:
+            self.visual_action_ticks -= 1
+            if self.visual_action_ticks == 0:
+                self.visual_action = "stationary"
+        if self.last_harvest_timer > 0:
+            self.last_harvest_timer -= 1
+        else:
+            self.last_harvest_pos = None
 
         # DESCANSO EN CASA
         if self._handle_resting(state, tile):
@@ -127,16 +145,29 @@ class Agent:
         if not (self.resting and tile.type_name == "casa"):
             return False
 
+        self.visual_action = "stationary"
+        self.visual_action_ticks = 0
+
+        # Registrar energía al inicio del descanso
         if self.life_stats["energy_on_rest"] is None:
             self.life_stats["energy_on_rest"] = self.energy
+            self._rest_start_energy = self.energy
 
-        self.energy += self.genes.rest_efficiency
-        print(f"[Agent] Descansando... energia={self.energy:.1f}")
+        # Recuperación lineal: de energía inicial → max_energy en REST_TICKS_MAX ticks
+        recovery_per_tick = (self.max_energy - self._rest_start_energy) / REST_TICKS_MAX
+        self.energy = min(self.max_energy, self.energy + recovery_per_tick)
+        self.rest_ticks += 1
 
-        if self.energy >= self.max_energy:
+        day = (self.rest_ticks - 1) // (REST_TICKS_MAX // 3) + 1
+        print(f"[Agent] Descansando día {day}/3 — tick {self.rest_ticks}/{REST_TICKS_MAX} "
+              f"— energía {self.energy:.1f}/{self.max_energy:.0f}")
+
+        if self.rest_ticks >= REST_TICKS_MAX:
             self.energy = self.max_energy
             self.resting = False
-            print("[Agent] Energia completa. Volviendo al trabajo")
+            self.rest_ticks = 0
+            self._rest_start_energy = 0.0
+            print("[Agent] Descanso de 3 días completado. Volviendo al trabajo")
 
             self.evolution.end_life(self)
             print(f"[Agent] Generación {self.evolution.generation} | "
@@ -157,7 +188,10 @@ class Agent:
             self.memory["home_tiles"].add((self.x, self.y))
 
         for crop in state.crops:
-            self.memory["known_crops"][crop.pos] = crop
+            dx = abs(crop.x - self.x)
+            dy = abs(crop.y - self.y)
+            if dx + dy <= self.genes.vision_radius:
+                self.memory["known_crops"][crop.pos] = crop
 
     def _sync_known_crops(self, state):
         """Elimina de known_crops los crops destruidos por eventos (Fix B)."""
@@ -213,8 +247,10 @@ class Agent:
     def _make_decision(self, state):
         """Decide goal y calcula path hacia él."""
         self.goal, self.strategy = self.decision_system.decide(state, self)
-        print(f"[Agent] Decisión → goal={self.goal} strategy={self.strategy}")
-        print(f"[Agent] Crops conocidos: {list(self.memory['known_crops'].keys())}")
+        if not self.goal:
+            reason = self.decision_system.goal_manager.last_reject_reason
+            known = list(self.memory["known_crops"].keys())
+            print(f"[Agent] Sin goal — razón: {reason} | crops conocidos: {known}")
 
         if not self.goal:
             return
@@ -222,11 +258,16 @@ class Agent:
         gx, gy = self.goal.pos
         path = self.pathfinder.find_path(self.x, self.y, gx, gy, state.grid)
         if path:
+            self.path_failures = 0
             path = self._centralize_path(path, state.grid)
             self.current_path = deque(path[1:])
             print(f"[Agent] Ruta calculada a {self.goal.pos} — {len(self.current_path)} pasos")
         else:
-            print(f"[Agent] Sin ruta a {self.goal.pos}")
+            self.path_failures += 1
+            penalty = min(self.path_failures * 1.0, 6.0)
+            self.energy -= penalty
+            print(f"[Agent] Bloqueado — fallo #{self.path_failures} hacia {self.goal.pos} "
+                  f"| -{penalty:.1f} energía (quedan {self.energy:.1f})")
             self.goal = None
             self.strategy = None
             self.needs_replan = False
@@ -275,8 +316,12 @@ class Agent:
                 self._execute_strategy(state)
                 self._reset_goal()
             else:
-                # Path agotado pero no llegamos al goal — replanificar
-                print(f"[Agent] Path exhausto con dist={dist} > 1, forzando replan")
+                # Path cortado por obstáculo mid-ruta — penalizar y replanificar
+                self.path_failures += 1
+                penalty = min(self.path_failures * 0.8, 4.0)
+                self.energy -= penalty
+                print(f"[Agent] Camino cortado por obstáculo (dist={dist}) "
+                      f"| -{penalty:.1f} energía | fallo #{self.path_failures}")
                 self.needs_replan = True
 
         return True
@@ -298,48 +343,90 @@ class Agent:
     # ── ESTRATEGIA ──────────────────────────────────────────────────────────
 
     def _execute_strategy(self, state):
-        """Ejecuta la acción planeada sobre el crop objetivo."""
+        """Ejecuta la acción planeada sobre el goal (crop o animal)."""
         if not self.goal or not self.strategy:
             return
 
-        crop = self.goal
+        goal = self.goal
+        is_animal = self.strategy in ("FEED", "COLLECT")
 
-        # Fix E: guard para crops destruidos por eventos (antes de HARVEST)
-        if crop not in state.crops and self.strategy != "HARVEST":
-            if crop.pos in self.memory["known_crops"]:
-                del self.memory["known_crops"][crop.pos]
-            return
+        # Guard: verificar que el objetivo sigue existiendo
+        if is_animal:
+            if goal not in state.animals:
+                return
+        elif self.strategy != "HARVEST":
+            if goal not in state.crops:
+                if goal.pos in self.memory["known_crops"]:
+                    del self.memory["known_crops"][goal.pos]
+                return
 
         self.memory["episodes"].append({
             "pos": (self.x, self.y),
             "action": self.strategy,
-            "target": crop.pos
+            "target": goal.pos
         })
-        self.memory["last_actions"].append((self.strategy, crop.pos))
+        self.memory["last_actions"].append((self.strategy, goal.pos))
 
-        print(f"[Agent] Ejecutando '{self.strategy}' en {crop.pos} | "
-              f"humedad={crop.humedad:.1f} fase={crop.fase}")
+        # Actualizar dirección visual hacia el objetivo
+        if hasattr(goal, 'x') and hasattr(goal, 'y'):
+            dx = goal.x - self.x
+            dy = goal.y - self.y
+            if abs(dx) >= abs(dy):
+                self.dir = (1 if dx > 0 else -1, 0)
+            elif dy != 0:
+                self.dir = (0, 1 if dy > 0 else -1)
+
+        if is_animal:
+            print(f"[Agent] Ejecutando '{self.strategy}' en {goal.pos} ({goal.especie})")
+        else:
+            print(f"[Agent] Ejecutando '{self.strategy}' en {goal.pos} | "
+                  f"humedad={goal.humedad:.1f} fase={goal.fase}")
         if self.debug:
-            d = abs(self.x - crop.x) + abs(self.y - crop.y)
-            print(f"[EXECUTE] strategy={self.strategy} en pos={crop.pos} dist={d}")
+            d = abs(self.x - goal.x) + abs(self.y - goal.y)
+            print(f"[EXECUTE] strategy={self.strategy} en pos={goal.pos} dist={d}")
 
         if self.strategy == "WATER":
-            crop.humedad = min(100.0, crop.humedad + 50.0)
+            self._set_visual_action("watering", 4)
+            goal.humedad = min(100.0, goal.humedad + self.genes.water_efficiency)
 
         elif self.strategy == "PLANT":
-            crop.fase = 1
+            self._set_visual_action("planting", 4)
+            goal.fase = 1
 
         elif self.strategy == "HARVEST":
-            if crop not in state.crops:
-                if crop.pos in self.memory["known_crops"]:
-                    del self.memory["known_crops"][crop.pos]
+            if goal not in state.crops:
+                if goal.pos in self.memory["known_crops"]:
+                    del self.memory["known_crops"][goal.pos]
                 return
-            state.farmer_inventory.append(("crop", crop.pos))
-            state.crops.remove(crop)
+            self._set_visual_action("collecting", 5)
+            self.last_harvest_pos = goal.pos
+            self.last_harvest_timer = 8
+            harvest_bonus = state.active_effects.get("harvest_bonus", 1)
+            valor = goal.valor * harvest_bonus
+            state.farmer_inventory.append(("crop", goal.pos, goal.tipo, valor))
+            state.crops.remove(goal)
             self.life_stats["harvests"] += 1
-            print(f"[Agent] Cosechado {crop.pos} | inventario: {len(state.farmer_inventory)}")
-            if crop.pos in self.memory["known_crops"]:
-                del self.memory["known_crops"][crop.pos]
+            self.life_stats["harvest_value"] = self.life_stats.get("harvest_value", 0) + valor
+            state.score += valor
+            print(f"[Agent] Cosechado {goal.tipo} en {goal.pos} (valor={valor})")
+            if goal.pos in self.memory["known_crops"]:
+                del self.memory["known_crops"][goal.pos]
+
+        elif self.strategy == "FEED":
+            self._set_visual_action("collecting", 3)
+            goal.alimentar()
+            print(f"[Agent] Alimentado {goal.especie} en {goal.pos}")
+
+        elif self.strategy == "COLLECT":
+            self._set_visual_action("collecting", 3)
+            producto = goal.recoger_producto()
+            if producto:
+                nombre, valor = producto
+                state.farmer_inventory.append(("animal_product", goal.pos, nombre, valor))
+                self.life_stats["harvests"] += 1
+                self.life_stats["harvest_value"] = self.life_stats.get("harvest_value", 0) + valor
+                state.score += valor
+                print(f"[Agent] Recogido {nombre} de {goal.especie} (valor={valor})")
 
     # ── PATH HELPERS ────────────────────────────────────────────────────────
 
@@ -421,6 +508,21 @@ class Agent:
     # ── CICLO DE VIDA ───────────────────────────────────────────────────────
 
     def _reset_for_new_life(self, state):
+        # Limpiar obstáculos de evento sin tocar los estacionales que persisten
+        seasonal_blocked = {(x, y) for x, y, _ in state.seasonal_obstacles}
+        for x, y, _ in state.temp_obstacles:
+            if (x, y) not in seasonal_blocked:
+                state.grid[y][x].walkable = True
+        state.temp_obstacles.clear()
+        # Limpiar efectos de evento (preservar estacionales que SeasonManager reescribe)
+        for k in ("event_name", "movement_cost_multiplier", "energy_drain_per_tick",
+                  "crop_dry_multiplier", "harvest_bonus", "growth_multiplier_bonus"):
+            state.active_effects.pop(k, None)
+        if state._event_mgr is not None:
+            state._event_mgr.active_event = None
+            state._event_mgr.duration_remaining = 0
+        self.path_failures = 0
+
         if self.memory["home_tiles"]:
             hx, hy = next(iter(self.memory["home_tiles"]))
             self.x = hx
@@ -434,6 +536,12 @@ class Agent:
         self.current_path = deque()
         self.needs_replan = False
         self.resting = False
+        self.rest_ticks = 0
+        self._rest_start_energy = 0.0
+        self.visual_action = "stationary"
+        self.visual_action_ticks = 0
+        self.last_harvest_pos = None
+        self.last_harvest_timer = 0
 
         self.memory = {
             "visited_tiles":  set(),
@@ -455,6 +563,11 @@ class Agent:
             state.crops = self._crop_factory(state.grid)
         state.farmer_inventory = []
         state.generation = self.evolution.generation
+
+    def _set_visual_action(self, action, duration=3):
+        """Establece una acción visual temporal que persiste por N ticks."""
+        self.visual_action = action
+        self.visual_action_ticks = duration
 
     def _reset_goal(self):
         self.goal = None

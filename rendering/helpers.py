@@ -34,8 +34,27 @@ def _bar(surf, x, y, w, h, pct, color_hi, color_lo, color_mid=None):
 
 def _section_title(surface, fonts, text, x, y, width):
 
-    txt = fonts["sm"].render(text, True, (90, 60, 30))
-    surface.blit(txt, (x, y))
+    font = fonts["sm"]
+
+    surf = font.render(text, True, (90, 60, 30))
+    rect = surf.get_rect()
+
+    rect.centerx = x + width // 2
+    rect.y = y
+
+    surface.blit(surf, rect)
 
     # línea decorativa
-    pygame.draw.line(surface, (170,130,80), (x, y+16), (x+width, y+16), 1)
+    pygame.draw.line(surface, (170,130,80), (x, y+20), (x+width, y+20), 1)
+    
+def _label_center_x(pantalla, fuentes, texto, x, y, width, color, size="xs"):
+
+    font = fuentes[size]
+
+    surf = font.render(texto, True, color)
+    rect = surf.get_rect()
+
+    rect.centerx = x + width // 2
+    rect.y = y
+
+    pantalla.blit(surf, rect)

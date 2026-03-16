@@ -25,9 +25,15 @@ class StrategyManager:
         if goal.fase == 0:
             return "PLANT"
 
-        # Fase 1 con humedad entre 30-60: riego preventivo
-        if goal.fase == 1 and goal.humedad < 60:
-            return "WATER"
+        # Fase 1: siempre regar (humedad se capea a 100, mejor que estar idle)
+        return "WATER"
 
-        # Fase 1 con humedad >= 60: no necesita nada por ahora
+    def choose_animal_strategy(self, state, animal):
+        """Retorna 'FEED' | 'COLLECT' | None."""
+        if animal is None or not hasattr(animal, "hambre"):
+            return None
+        if animal.producto_listo:
+            return "COLLECT"
+        if animal.hambre >= 50:
+            return "FEED"
         return None

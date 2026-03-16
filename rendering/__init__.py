@@ -5,8 +5,13 @@ from rendering.grid_renderer import dibujar_grid
 from rendering.hud_renderer import dibujar_hud
 
 
-def render_frame(pantalla, state, agente, celda_px, particulas, fuentes, assets=None):
+def render_frame(pantalla, state, agente, celda_px, particulas, fuentes, assets=None, debug_visual=False):
     pantalla.fill(C["bg"])
-    dibujar_grid(pantalla, state, agente, celda_px, particulas, assets)
+    mapa = assets.get_map(state.season)
+
+    if mapa:
+        pantalla.blit(mapa, (0, 0))
+        
+    dibujar_grid(pantalla, state, agente, celda_px, particulas, assets, debug_visual)
     dibujar_hud(pantalla, state, agente, fuentes)
     pygame.display.flip()

@@ -1,6 +1,8 @@
 import os
 import pygame
 
+from rendering.sprite_manager import SpriteManager
+
 
 class AssetManager:
     """Carga y cachea assets gráficos. Se inicializa una vez en main.py."""
@@ -11,10 +13,11 @@ class AssetManager:
         self.grid_h = grid_h
         self._tiles = {}       # {nombre: Surface}
         self._crops = {}       # {fase: Surface}
-        self._agent = None     # Surface
+        self._agent = None     # Surface (fallback estático)
         self._maps = {}        # {estacion: Surface} — mapa de fondo por estación
         self._map_overlay = None  # Surface — overlay encima del mapa
         self._loaded = False
+        self.sprites = SpriteManager(cell_size=cell_size, scale_factor=2)
 
     def load_all(self):
         """Llamar después de pygame.init() y antes del game loop."""
@@ -22,6 +25,7 @@ class AssetManager:
         self._load_crops()
         self._load_agent()
         self._load_maps()
+        self.sprites.load_all()
         self._loaded = True
 
     def get_tile(self, type_name):
@@ -92,7 +96,7 @@ class AssetManager:
     def _load_maps(self):
         # Archivo ideal por estación. Primavera tiene fallback a map_verano si no existe.
         map_files = {
-            "Primavera": ("assets/map_primavera.jpeg", "assets/map_verano.jpeg"),
+            "Primavera": ("assets/map_overlay.png", "assets/map_verano.jpeg"),
             "Verano":    ("assets/map_verano.jpeg",    None),
             "Otoño":     ("assets/map_otoño.jpeg",     None),
             "Invierno":  ("assets/map_invierno.jpeg",  None),
@@ -109,9 +113,9 @@ class AssetManager:
                 print(f"[Assets] Mapa '{season}' cargado desde '{loaded_from}'")
 
         overlay = self._try_load_map("assets/map_overlay.png", target, alpha=False)
-        if overlay is not None:
-            overlay.set_alpha(160)   # semi-transparente: mapa estacional visible debajo
-            self._map_overlay = overlay
+        # if overlay is not None:
+        #     overlay.set_alpha(160)   # semi-transparente: mapa estacional visible debajo
+        #     self._map_overlay = overlay
 
     def _try_load_map(self, path, target, alpha=False):
         """Carga y escala una imagen. Retorna Surface o None si falla."""
