@@ -46,19 +46,18 @@ EVENT_TINTS = {
 }
 
 C = {
-    "bg":           ( 13,  14,  23),   # near-black, blue tint
-    "panel":        ( 18,  20,  34),
-    "card":         ( 25,  28,  48),   # dark blue-grey
-    "card_border":  ( 52,  58,  92),   # subtle, not loud
-    "accent":       (139, 233, 253),   # Dracula cyan
-    "accent2":      ( 80, 250, 123),   # Dracula green
-    "divider":      ( 40,  46,  74),
-    "txt_hi":       (248, 248, 242),   # near-white — max legibility
-    "txt_mid":      (189, 196, 224),   # medium grey-blue
-    "txt_dim":      (130, 142, 182),   # was (80,92,148) — much more readable
-    "energy_hi":    ( 80, 250, 123),   # Dracula green
-    "energy_mid":   (255, 184, 108),   # Dracula orange
-    "energy_lo":    (255,  85,  85),   # Dracula red
+    "bg": (245, 226, 182),
+    "divider": (170, 120, 80),
+    "accent": (120, 170, 90),
+    "accent2": (210, 160, 80),
+
+    "txt_hi": (70,50,30),
+    "txt_mid": (100,80,50),
+    "txt_dim": (140,110,70),
+
+    "energy_hi": (90,190,90),
+    "energy_mid": (230,180,80),
+    "energy_lo": (200,90,90)
 }
 
 SEASON_COLORS = {
